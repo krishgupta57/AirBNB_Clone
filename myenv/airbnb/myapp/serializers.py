@@ -59,6 +59,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'guests',
             'property_type',
             'image',
+            'image_file',
             'created_at',
             'average_rating',
             'reviews',

@@ -48,7 +48,7 @@ function Wishlist() {
           {items.map((item) => (
             <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
               <img
-                src={item.property_detail.image || "https://via.placeholder.com/600x400"}
+                src={item.property_detail.image_file || item.property_detail.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
                 className="w-full h-60 object-cover"
               />
               <div className="p-5">

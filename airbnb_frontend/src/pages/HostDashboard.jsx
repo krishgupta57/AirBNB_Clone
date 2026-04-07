@@ -72,7 +72,7 @@ function HostDashboard() {
           {properties.map((item) => (
             <div key={item.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <img
-                src={item.image || "https://via.placeholder.com/600x400"}
+                src={item.image_file || item.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
                 className="w-full h-56 object-cover"
               />
               <div className="p-5">

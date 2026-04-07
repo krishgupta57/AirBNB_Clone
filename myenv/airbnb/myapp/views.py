@@ -84,7 +84,7 @@ class PropertyListCreateView(APIView):
         if search:
             properties = Property.objects.filter(title__icontains=search) | Property.objects.filter(location__icontains=search)
 
-        serializer = PropertySerializer(properties, many=True)
+        serializer = PropertySerializer(properties, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):
@@ -104,7 +104,7 @@ class PropertyListCreateView(APIView):
 class PropertyDetailView(APIView):
     def get(self, request, pk):
         property_obj = get_object_or_404(Property, pk=pk)
-        serializer = PropertySerializer(property_obj)
+        serializer = PropertySerializer(property_obj, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request, pk):
@@ -140,7 +140,7 @@ class MyPropertiesView(APIView):
 
     def get(self, request):
         properties = Property.objects.filter(host=request.user).order_by('-created_at')
-        serializer = PropertySerializer(properties, many=True)
+        serializer = PropertySerializer(properties, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -176,7 +176,7 @@ class WishlistView(APIView):
 
     def get(self, request):
         wishlist_items = Wishlist.objects.filter(user=request.user)
-        serializer = WishlistSerializer(wishlist_items, many=True)
+        serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):

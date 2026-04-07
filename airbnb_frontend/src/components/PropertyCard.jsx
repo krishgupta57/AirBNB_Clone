@@ -6,7 +6,7 @@ function PropertyCard({ property }) {
     <div className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100">
       <div className="relative">
         <img
-          src={property.image || "https://via.placeholder.com/600x400"}
+          src={property.image_file || property.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
           alt={property.title}
           className="w-full h-64 object-cover"
         />

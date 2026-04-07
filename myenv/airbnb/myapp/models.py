@@ -35,6 +35,7 @@ class Property(models.Model):
     guests = models.PositiveIntegerField(default=1)
     property_type = models.CharField(max_length=20, choices=PROPERTY_TYPES, default='apartment')
     image = models.URLField(blank=True, null=True)
+    image_file = models.ImageField(upload_to='property_images/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def average_rating(self):

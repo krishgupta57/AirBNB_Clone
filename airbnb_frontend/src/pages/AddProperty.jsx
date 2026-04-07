@@ -18,14 +18,36 @@ function AddProperty() {
     image: "",
   });
 
+  const [imageFile, setImageFile] = useState(null);
+  const [imageChoice, setImageChoice] = useState("url"); // "url" or "file"
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    setImageFile(e.target.files[0]);
+  };
+
   const submitForm = async (e) => {
     e.preventDefault();
+    
+    const formData = new FormData();
+    Object.keys(form).forEach(key => {
+      formData.append(key, form[key]);
+    });
+
+    if (imageChoice === "file" && imageFile) {
+      formData.append("image_file", imageFile);
+      formData.delete("image"); // Ensure URL is not sent if file is chosen
+    }
+
     try {
-      await API.post("properties/", form);
+      await API.post("properties/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       toast.success("Property added successfully");
       navigate("/my-properties");
     } catch (error) {
@@ -55,9 +77,30 @@ function AddProperty() {
             <option value="room">Room</option>
           </select>
 
-          <input name="image" placeholder="Image URL" onChange={handleChange} className="border border-slate-200 rounded-2xl px-4 py-3 md:col-span-2" />
+          <div className="md:col-span-2 space-y-4 py-4 border-t border-slate-100 mt-2">
+            <label className="block font-semibold text-slate-700 mb-2">Image Option:</label>
+            <div className="flex gap-4 mb-4">
+              <label className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition ${imageChoice === 'url' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 bg-slate-50'}`}>
+                <input type="radio" name="imageChoice" value="url" checked={imageChoice === 'url'} onChange={() => setImageChoice('url')} className="hidden" />
+                <span className={imageChoice === 'url' ? 'text-rose-600 font-bold' : 'text-slate-500'}>Paste Link</span>
+              </label>
+              <label className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition ${imageChoice === 'file' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 bg-slate-50'}`}>
+                <input type="radio" name="imageChoice" value="file" checked={imageChoice === 'file'} onChange={() => setImageChoice('file')} className="hidden" />
+                <span className={imageChoice === 'file' ? 'text-rose-600 font-bold' : 'text-slate-500'}>Upload Photo</span>
+              </label>
+            </div>
 
-          <button className="md:col-span-2 bg-slate-900 hover:bg-rose-500 text-white py-4 rounded-2xl font-semibold transition">
+            {imageChoice === "url" ? (
+              <input name="image" placeholder="Enter image URL (e.g. https://...)" onChange={handleChange} className="w-full border border-slate-200 rounded-2xl px-4 py-3" />
+            ) : (
+              <div className="flex items-center gap-4">
+                <input type="file" accept="image/*" onChange={handleFileChange} className="w-full" />
+                {imageFile && <span className="text-sm text-green-600">Attached!</span>}
+              </div>
+            )}
+          </div>
+
+          <button className="md:col-span-2 bg-slate-900 hover:bg-rose-500 text-white py-4 rounded-2xl font-semibold transition mt-4 shadow-lg active:scale-95">
             Save Property
           </button>
         </form>

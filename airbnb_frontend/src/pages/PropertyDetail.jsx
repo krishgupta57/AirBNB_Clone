@@ -88,7 +88,7 @@ function PropertyDetail() {
   return (
     <div className="container-custom py-12">
       <img
-        src={property.image || "https://via.placeholder.com/1000x500"}
+        src={property.image_file || property.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
         className="w-full h-[450px] object-cover rounded-[2rem] shadow-lg"
       />
 

@@ -57,7 +57,7 @@ function MyProperties() {
           {properties.map((property) => (
             <div key={property.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
               <img
-                src={property.image || "https://via.placeholder.com/600x400"}
+                src={property.image_file || property.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
                 className="w-full h-60 object-cover"
               />
               <div className="p-5">
