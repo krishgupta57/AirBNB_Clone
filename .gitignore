@@ -1,0 +1,45 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules
+node_modules/
+airbnb_frontend/node_modules/
+
+# Build outputs
+dist/
+airbnb_frontend/dist/
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python/Django
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+.env
+myenv/Include/
+myenv/Lib/
+myenv/Scripts/
+myenv/pyvenv.cfg
+myenv/pip-selfcheck.json
+
+# Keep the project code in myenv/airbnb
+!myenv/airbnb/
