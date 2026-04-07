@@ -23,8 +23,8 @@ function Register() {
     e.preventDefault();
     try {
       await API.post("register/", form);
-      toast.success("Registration successful");
-      navigate("/login");
+      toast.success("Account created! Please check your Gmail.");
+      navigate("/verify-otp", { state: { email: form.email } });
     } catch (error) {
       console.log(error.response?.data);
       toast.error("Registration failed");

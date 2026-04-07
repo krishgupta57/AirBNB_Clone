@@ -6,9 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.core.mail import send_mail
 from django.conf import settings
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.contrib.auth.tokens import default_token_generator
+import random
 
 from .models import Property, Booking, Review, Wishlist
 from .serializers import (
@@ -29,13 +27,13 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+        user.otp = otp
+        user.save()
         
-        verify_url = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
-        
-        subject = "Verify your Email - AirBNB Clone"
-        message = f"Hi {user.username},\n\nPlease click the link below to verify your email and activate your account:\n{verify_url}\n\nIf you didn't register on our site, please ignore this email."
+        subject = "Your Verification Code - AirBNB Clone"
+        message = f"Hi {user.username},\n\nYour 6-digit verification code is: {otp}\n\nPlease enter this code on the website to activate your account.\n\nIf you didn't register on our site, please ignore this email."
         
         send_mail(
             subject,
@@ -46,22 +44,28 @@ class RegisterView(generics.CreateAPIView):
         )
 
 
-class VerifyEmailView(APIView):
+class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, uidb64, token):
-        try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            user = None
+    def post(self, request):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
 
-        if user is not None and default_token_generator.check_token(user, token):
+        if not email or not otp:
+            return Response({"error": "Email and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.otp == otp:
             user.is_active = True
+            user.otp = None  # Clear OTP after successful verification
             user.save()
             return Response({"message": "Email verified successfully! You can now log in."}, status=status.HTTP_200_OK)
         else:
-            return Response({"error": "Invalid or expired verification link."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProfileView(APIView):

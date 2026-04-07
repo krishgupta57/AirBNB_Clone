@@ -10,6 +10,8 @@ class User(AbstractUser):
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='guest')
     phone = models.CharField(max_length=15, blank=True, null=True)
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.username

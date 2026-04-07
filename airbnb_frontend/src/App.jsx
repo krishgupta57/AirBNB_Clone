@@ -16,6 +16,7 @@ import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
 import HostDashboard from "./pages/HostDashboard";
 import VerifyEmail from "./pages/VerifyEmail";
+import VerifyOTP from "./pages/VerifyOTP";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email/:uidb64/:token" element={<VerifyEmail />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/property/:id" element={<PropertyDetail />} />
 
           <Route

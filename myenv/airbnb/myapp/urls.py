@@ -8,7 +8,7 @@ from .views import (
     BookingListCreateView,
     ReviewCreateView,
     WishlistView,
-    VerifyEmailView,
+    VerifyOTPView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -25,5 +25,5 @@ urlpatterns = [
     path('bookings/', BookingListCreateView.as_view(), name='bookings'),
     path('reviews/', ReviewCreateView.as_view(), name='reviews'),
     path('wishlist/', WishlistView.as_view(), name='wishlist'),
-    path('verify-email/<str:uidb64>/<str:token>/', VerifyEmailView.as_view(), name='verify-email'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
 ]
