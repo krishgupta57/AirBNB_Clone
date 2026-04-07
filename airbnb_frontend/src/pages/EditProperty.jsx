@@ -65,18 +65,24 @@ function EditProperty() {
       formData.append("image", form.image || "");
     }
 
-    try {
-      await API.put(`properties/${id}/`, formData, {
+    toast.promise(
+      API.put(`properties/${id}/`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      });
-      toast.success("Property updated successfully");
-      navigate("/my-properties");
-    } catch (error) {
-      console.log(error.response?.data);
-      toast.error("Failed to update property");
-    }
+      }),
+      {
+        loading: "updating property details...",
+        success: () => {
+          navigate("/my-properties");
+          return "property updated successfully!";
+        },
+        error: (err) => {
+          console.error(err);
+          return err.response?.data?.error || "failed to update property";
+        },
+      }
+    );
   };
 
   return (

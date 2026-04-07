@@ -42,18 +42,24 @@ function AddProperty() {
       formData.delete("image"); // Ensure URL is not sent if file is chosen
     }
 
-    try {
-      await API.post("properties/", formData, {
+    toast.promise(
+      API.post("properties/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      });
-      toast.success("Property added successfully");
-      navigate("/my-properties");
-    } catch (error) {
-      console.log(error.response?.data);
-      toast.error("Failed to add property");
-    }
+      }),
+      {
+        loading: "creating your listing...",
+        success: () => {
+          navigate("/my-properties");
+          return "property added successfully!";
+        },
+        error: (err) => {
+          console.error(err);
+          return err.response?.data?.error || "failed to add property";
+        },
+      }
+    );
   };
 
   return (

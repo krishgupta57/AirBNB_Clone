@@ -19,9 +19,36 @@ import VerifyEmail from "./pages/VerifyEmail";
 import VerifyOTP from "./pages/VerifyOTP";
 import NotFound from "./pages/NotFound";
 
+import { Toaster } from "react-hot-toast";
+
 function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-rose-100 selection:text-rose-900">
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#1e293b",
+            color: "#fff",
+            borderRadius: "1rem",
+            padding: "1rem 1.5rem",
+            fontSize: "0.95rem",
+            fontWeight: "500",
+            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+          },
+          success: {
+            style: {
+              background: "#10b981",
+            },
+          },
+          error: {
+            style: {
+              background: "#ef4444",
+            },
+          },
+        }}
+      />
       <Navbar />
       <main className="flex-1">
         <Routes>

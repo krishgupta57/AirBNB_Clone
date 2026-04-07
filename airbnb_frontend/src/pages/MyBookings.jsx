@@ -35,7 +35,7 @@ function MyBookings() {
             <div key={booking.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
               <div className="grid md:grid-cols-4 gap-6 items-center">
                 <img
-                  src={booking.property_detail.image || "https://via.placeholder.com/400x250"}
+                  src={booking.property_detail.image_file || booking.property_detail.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
                   className="w-full h-40 object-cover rounded-2xl"
                 />
                 <div className="md:col-span-2">
