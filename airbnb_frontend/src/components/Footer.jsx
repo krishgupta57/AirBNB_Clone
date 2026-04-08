@@ -3,7 +3,9 @@ function Footer() {
     <footer className="bg-slate-950 text-slate-300 mt-20">
       <div className="container-custom py-14 grid md:grid-cols-4 gap-8">
         <div>
-          <h3 className="text-2xl font-bold text-white">StayVista</h3>
+          <h3 className="text-2xl font-extrabold text-rose-500">
+            Air<span className="text-white">BNB</span>
+          </h3>
           <p className="mt-3 text-slate-400">
             Discover unique homes, premium villas, and unforgettable stays with a modern booking experience.
           </p>
@@ -41,8 +43,8 @@ function Footer() {
       </div>
 
       <div className="border-t border-slate-800">
-        <div className="container-custom py-5 text-sm text-slate-500">
-          © 2026 StayVista. All rights reserved.
+        <div className="container-custom py-5 text-sm text-slate-500 text-center">
+          © 2026 AirBNB. All rights reserved.
         </div>
       </div>
     </footer>
