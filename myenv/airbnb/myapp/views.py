@@ -78,11 +78,18 @@ class ProfileView(APIView):
 
 class PropertyListCreateView(APIView):
     def get(self, request):
-        properties = Property.objects.all().order_by('-created_at')
+        properties = Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
         search = request.GET.get('search')
+        limit = request.GET.get('limit')
 
         if search:
-            properties = Property.objects.filter(title__icontains=search) | Property.objects.filter(location__icontains=search)
+            properties = properties.filter(title__icontains=search) | properties.filter(location__icontains=search)
+
+        if limit:
+            try:
+                properties = properties[:int(limit)]
+            except ValueError:
+                pass
 
         serializer = PropertySerializer(properties, many=True, context={'request': request})
         return Response(serializer.data)
@@ -103,7 +110,10 @@ class PropertyListCreateView(APIView):
 
 class PropertyDetailView(APIView):
     def get(self, request, pk):
-        property_obj = get_object_or_404(Property, pk=pk)
+        property_obj = get_object_or_404(
+            Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user'), 
+            pk=pk
+        )
         serializer = PropertySerializer(property_obj, context={'request': request})
         return Response(serializer.data)
 
@@ -139,7 +149,7 @@ class MyPropertiesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        properties = Property.objects.filter(host=request.user).order_by('-created_at')
+        properties = Property.objects.filter(host=request.user).select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
         serializer = PropertySerializer(properties, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -148,7 +158,11 @@ class BookingListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        bookings = Booking.objects.filter(user=request.user).order_by('-created_at')
+        bookings = Booking.objects.filter(user=request.user).select_related(
+            'user', 'property', 'property__host'
+        ).prefetch_related(
+            'property__reviews', 'property__reviews__user'
+        ).order_by('-created_at')
         serializer = BookingSerializer(bookings, many=True)
         return Response(serializer.data)
 
@@ -175,7 +189,11 @@ class WishlistView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        wishlist_items = Wishlist.objects.filter(user=request.user)
+        wishlist_items = Wishlist.objects.filter(user=request.user).select_related(
+            'property', 'property__host'
+        ).prefetch_related(
+            'property__reviews', 'property__reviews__user'
+        )
         serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
         return Response(serializer.data)
 

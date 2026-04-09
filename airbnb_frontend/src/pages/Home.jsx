@@ -21,7 +21,7 @@ function Home() {
 
   const fetchProperties = async () => {
     try {
-      const res = await API.get(`properties/?search=${search}`);
+      const res = await API.get(`properties/?search=${search}&limit=6`);
       setProperties(res.data);
     } catch (error) {
       console.log(error);
@@ -31,8 +31,6 @@ function Home() {
   useEffect(() => {
     fetchProperties();
   }, []);
-
-  const displayed = properties.slice(0, 6);
 
   return (
     <div>
@@ -147,8 +145,8 @@ function Home() {
           />
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-            {displayed.length > 0 ? (
-              displayed.map((property) => (
+            {properties.length > 0 ? (
+              properties.map((property) => (
                 <PropertyCard key={property.id} property={property} />
               ))
             ) : (
