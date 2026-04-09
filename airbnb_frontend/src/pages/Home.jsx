@@ -160,7 +160,7 @@ function Home() {
       <section className="py-20">
         <div className="container-custom">
           <SectionTitle
-            badge="Why StayVista"
+            badge="Why AirBNB"
             title="Built for Reliable, Elegant, and Secure Booking"
             subtitle="A better experience for guests and a smarter platform for hosts."
           />

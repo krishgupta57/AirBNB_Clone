@@ -15,6 +15,20 @@ function MyBookings() {
     }
   };
 
+  const cancelBooking = async (id) => {
+    toast.promise(
+      API.post(`bookings/${id}/cancel/`),
+      {
+        loading: "Cancelling booking...",
+        success: () => {
+          loadBookings();
+          return "Booking cancelled successfully";
+        },
+        error: (err) => err.response?.data?.error || "Failed to cancel booking",
+      }
+    );
+  };
+
   useEffect(() => {
     loadBookings();
   }, []);
@@ -47,7 +61,18 @@ function MyBookings() {
                 <div>
                   <p className="text-slate-500">Total Amount</p>
                   <h3 className="text-3xl font-bold text-rose-500">₹{booking.total_price}</h3>
-                  <p className="mt-2 text-sm font-medium text-emerald-600 capitalize">{booking.status}</p>
+                  <p className={`mt-2 text-sm font-medium capitalize ${booking.status === 'cancelled' ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {booking.status}
+                  </p>
+                  
+                  {booking.status !== 'cancelled' && (
+                    <button 
+                      onClick={() => cancelBooking(booking.id)}
+                      className="mt-4 px-4 py-2 border border-rose-500 text-rose-500 text-sm font-semibold rounded-xl hover:bg-rose-50 transition w-full"
+                    >
+                      Cancel Booking
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
