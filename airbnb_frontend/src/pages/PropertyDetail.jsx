@@ -99,12 +99,12 @@ function PropertyDetail() {
     <div className="container-custom py-12">
       <img
         src={property.image_file || property.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
-        className="w-full h-[450px] object-cover rounded-[2rem] shadow-lg"
+        className="w-full h-[250px] md:h-[450px] object-cover rounded-2xl md:rounded-[2rem] shadow-lg"
       />
 
-      <div className="grid lg:grid-cols-3 gap-10 mt-10">
+      <div className="grid lg:grid-cols-3 gap-6 md:gap-10 mt-6 md:mt-10">
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
+          <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-100">
             <h1 className="text-4xl font-bold">{property.title}</h1>
             <p className="text-slate-500 mt-2">{property.location}</p>
             <p className="mt-6 text-lg leading-8 text-slate-600">{property.description}</p>
@@ -183,7 +183,7 @@ function PropertyDetail() {
         </div>
 
         <div>
-          <div className="bg-white rounded-[2rem] p-8 shadow-lg border border-slate-100 sticky top-24">
+          <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 shadow-lg border border-slate-100 lg:sticky lg:top-24">
             <h2 className="text-3xl font-bold">₹{property.price_per_night}</h2>
             <p className="text-slate-500">per night</p>
 

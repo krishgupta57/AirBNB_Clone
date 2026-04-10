@@ -86,7 +86,7 @@ function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-slate-200 bg-white">
+        <div className="md:hidden border-t border-slate-200 bg-white absolute top-full left-0 w-full shadow-lg">
           <div className="container-custom py-4 flex flex-col gap-4 text-slate-700 font-medium">
             <NavLinks />
             {!user ? (

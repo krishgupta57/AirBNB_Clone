@@ -35,28 +35,28 @@ function HostDashboard() {
   );
 
   return (
-    <div className="container-custom py-12">
-      <div className="bg-gradient-to-r from-slate-900 to-slate-700 rounded-[2rem] text-white p-10 mb-10">
-        <h1 className="text-4xl font-bold">Host Dashboard</h1>
-        <p className="text-slate-300 mt-3">
+    <div className="container-custom py-8 md:py-12">
+      <div className="bg-gradient-to-r from-slate-900 to-slate-700 rounded-2xl md:rounded-[2rem] text-white p-6 md:p-10 mb-8 md:mb-10">
+        <h1 className="text-3xl md:text-4xl font-bold">Host Dashboard</h1>
+        <p className="text-slate-300 mt-2 md:mt-3">
           Manage your listings, review your hosting portfolio, and track your business analytics.
         </p>
       </div>
 
       {analytics && (
         <>
-          <div className="grid md:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
             <DashboardStat title="Total Earnings" value={`₹${analytics.total_revenue.toLocaleString()}`} hint="From all confirmed bookings" />
             <DashboardStat title="Total Bookings" value={analytics.total_bookings} hint="Confirmed & pending" />
             <DashboardStat title="Cancellations" value={analytics.cancelled_bookings} hint="Total cancelled orders" />
             <DashboardStat title="Active Listings" value={totalProperties} hint={`Capacity: ${totalGuestsCapacity} guests`} />
           </div>
 
-          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm mb-10">
-            <h2 className="text-2xl font-bold mb-6">Revenue Overview</h2>
-            <div className="h-[300px] w-full">
+          <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm mb-8 md:mb-10 w-full overflow-hidden">
+            <h2 className="text-xl md:text-2xl font-bold mb-6">Revenue Overview</h2>
+            <div className="h-[250px] md:h-[300px] w-full">
               {analytics.chart_data && analytics.chart_data.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                   <BarChart data={analytics.chart_data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B'}} dy={10} />

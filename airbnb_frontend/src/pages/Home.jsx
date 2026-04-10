@@ -36,12 +36,12 @@ function Home() {
     <div>
       {/* Section 1: Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-orange-400 text-white">
-        <div className="container-custom py-24 grid lg:grid-cols-2 gap-10 items-center">
+        <div className="container-custom py-12 md:py-24 grid lg:grid-cols-2 gap-10 items-center">
           <div>
-            <span className="inline-block px-4 py-1 rounded-full bg-white/20 text-sm mb-5">
+            <span className="inline-block px-4 py-1 rounded-full bg-white/20 text-xs md:text-sm mb-5">
               Premium stays, trusted hosts, instant comfort
             </span>
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
+            <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
               Find Your Dream Stay Anywhere, Anytime
             </h1>
             <p className="mt-6 text-lg text-white/90 max-w-xl">
@@ -64,22 +64,22 @@ function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 mt-8 lg:mt-0">
             <img
               src="https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"
-              className="rounded-3xl h-72 w-full object-cover shadow-2xl"
+              className="rounded-2xl md:rounded-3xl h-40 md:h-72 w-full object-cover shadow-2xl"
             />
             <img
               src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267"
-              className="rounded-3xl h-72 w-full object-cover shadow-2xl mt-10"
+              className="rounded-2xl md:rounded-3xl h-40 md:h-72 w-full object-cover shadow-2xl md:mt-10"
             />
             <img
               src="https://images.unsplash.com/photo-1494526585095-c41746248156"
-              className="rounded-3xl h-72 w-full object-cover shadow-2xl -mt-8"
+              className="rounded-2xl md:rounded-3xl h-40 md:h-72 w-full object-cover shadow-2xl md:-mt-8"
             />
             <img
               src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2"
-              className="rounded-3xl h-72 w-full object-cover shadow-2xl"
+              className="rounded-2xl md:rounded-3xl h-40 md:h-72 w-full object-cover shadow-2xl"
             />
           </div>
         </div>
@@ -110,7 +110,7 @@ function Home() {
       </section>
 
       {/* Section 3: Categories */}
-      <section className="py-20">
+      <section className="py-12 md:py-20">
         <div className="container-custom">
           <SectionTitle
             badge="Popular Categories"
@@ -136,7 +136,7 @@ function Home() {
       </section>
 
       {/* Section 4: Featured Listings */}
-      <section className="py-20 bg-white">
+      <section className="py-12 md:py-20 bg-white">
         <div className="container-custom">
           <SectionTitle
             badge="Featured Listings"
@@ -157,7 +157,7 @@ function Home() {
       </section>
 
       {/* Section 5: Why Choose Us */}
-      <section className="py-20">
+      <section className="py-12 md:py-20">
         <div className="container-custom">
           <SectionTitle
             badge="Why AirBNB"
@@ -194,7 +194,7 @@ function Home() {
       </section>
 
       {/* Section 6: How It Works */}
-      <section className="py-20 bg-slate-900 text-white">
+      <section className="py-12 md:py-20 bg-slate-900 text-white">
         <div className="container-custom">
           <SectionTitle
             badge="How It Works"
@@ -219,7 +219,7 @@ function Home() {
       </section>
 
       {/* Section 7: Become a Host */}
-      <section className="py-20">
+      <section className="py-12 md:py-20">
         <div className="container-custom">
           <div className="bg-gradient-to-r from-slate-900 to-slate-700 rounded-[2rem] p-10 md:p-14 text-white grid lg:grid-cols-2 gap-10 items-center">
             <div>
@@ -256,7 +256,7 @@ function Home() {
       </section>
 
       {/* Section 8: Testimonials */}
-      <section className="py-20 bg-white">
+      <section className="py-12 md:py-20 bg-white">
         <div className="container-custom">
           <SectionTitle
             badge="Guest Stories"
@@ -289,7 +289,7 @@ function Home() {
       </section>
 
       {/* Section 9: FAQ + CTA */}
-      <section className="py-20">
+      <section className="py-12 md:py-20">
         <div className="container-custom grid lg:grid-cols-2 gap-10 items-start">
           <div>
             <SectionTitle

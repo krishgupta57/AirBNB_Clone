@@ -1,8 +1,8 @@
 function Footer() {
   return (
-    <footer className="bg-slate-950 text-slate-300 mt-20">
-      <div className="container-custom py-14 grid md:grid-cols-4 gap-8">
-        <div>
+    <footer className="bg-slate-950 text-slate-300 mt-10 md:mt-20">
+      <div className="container-custom py-10 md:py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="col-span-2 md:col-span-1">
           <h3 className="text-2xl font-extrabold text-rose-500">
             Air<span className="text-white">BNB</span>
           </h3>
