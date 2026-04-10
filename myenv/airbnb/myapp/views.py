@@ -112,6 +112,64 @@ class PropertyViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(properties, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def analytics(self, request):
+        if request.user.role != 'host':
+            raise PermissionDenied({"error": "Only hosts can view analytics"})
+        
+        from django.db.models import Sum
+        from django.db.models.functions import TruncMonth
+        from django.utils import timezone
+        from datetime import timedelta
+
+        properties = self.get_queryset().filter(host=request.user)
+        bookings = Booking.objects.filter(property__in=properties)
+        
+        total_revenue = bookings.filter(status='confirmed').aggregate(total=Sum('total_price'))['total'] or 0
+        total_bookings = bookings.count()
+        cancelled_bookings = bookings.filter(status='cancelled').count()
+        
+        six_months_ago = timezone.now() - timedelta(days=180)
+        
+        revenue_data = (
+            bookings.filter(status='confirmed', created_at__gte=six_months_ago)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(revenue=Sum('total_price'))
+            .order_by('month')
+        )
+        
+        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        chart_data = []
+        for rd in revenue_data:
+            if rd['month']:
+                chart_data.append({
+                    "name": months[rd['month'].month - 1] + f" '{str(rd['month'].year)[2:]}",
+                    "revenue": float(rd['revenue'] or 0)
+                })
+                
+        return Response({
+            "total_revenue": float(total_revenue),
+            "total_bookings": total_bookings,
+            "cancelled_bookings": cancelled_bookings,
+            "chart_data": chart_data
+        })
+
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
+    def booked_dates(self, request, pk=None):
+        from datetime import timedelta
+        property_obj = self.get_object()
+        bookings = Booking.objects.filter(property=property_obj, status='confirmed')
+        
+        booked_dates = set()
+        for booking in bookings:
+            current_date = booking.check_in
+            # We don't exclude the check_out day so another person can check-in on that afternoon
+            while current_date < booking.check_out: 
+                booked_dates.add(current_date.strftime('%Y-%m-%d'))
+                current_date += timedelta(days=1)
+                
+        return Response(list(booked_dates))
 
 class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = BookingSerializer

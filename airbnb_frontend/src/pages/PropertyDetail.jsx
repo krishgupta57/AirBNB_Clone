@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import API from "../api";
 import toast from "react-hot-toast";
 import { getUser } from "../utils/auth";
-
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 function PropertyDetail() {
   const { id } = useParams();
   const user = getUser();
@@ -19,14 +20,22 @@ function PropertyDetail() {
     rating: 5,
     comment: "",
   });
+  const [bookedDates, setBookedDates] = useState([]);
 
   const loadProperty = async () => {
     try {
-      const res = await API.get(`properties/${id}/`);
-      setProperty(res.data);
+      const [propRes, datesRes] = await Promise.all([
+        API.get(`properties/${id}/`),
+        API.get(`properties/${id}/booked_dates/`)
+      ]);
+      setProperty(propRes.data);
+      if (datesRes.data) {
+        const disabledDates = datesRes.data.map(dateStr => new Date(`${dateStr}T00:00:00`));
+        setBookedDates(disabledDates);
+      }
     } catch (error) {
       console.log(error);
-      toast.error("Failed to load property");
+      toast.error("Failed to load property details");
     }
   };
 
@@ -44,6 +53,7 @@ function PropertyDetail() {
       await API.post("bookings/", booking);
       toast.success("Booking successful");
       setBooking({ property: id, check_in: "", check_out: "" });
+      loadProperty(); // Reload to grey out the newly booked dates!
     } catch (error) {
       console.log(error.response?.data);
       toast.error("Booking failed");
@@ -180,24 +190,44 @@ function PropertyDetail() {
             <form onSubmit={bookNow} className="space-y-4 mt-6">
               <div>
                 <label className="block mb-2 font-medium">Check In</label>
-                <input
-                  type="date"
-                  value={booking.check_in}
-                  onChange={(e) => setBooking({ ...booking, check_in: e.target.value })}
-                  className="w-full border border-slate-200 rounded-2xl px-4 py-3"
-                  required
-                />
+                <div className="w-full relative">
+                  <DatePicker 
+                    selected={booking.check_in ? new Date(`${booking.check_in}T00:00:00`) : null}
+                    onChange={(date) => {
+                      if (date) {
+                        const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                        setBooking({ ...booking, check_in: localDate });
+                      }
+                    }}
+                    excludeDates={bookedDates}
+                    minDate={new Date()}
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3 bg-white"
+                    placeholderText="Select date"
+                    dateFormat="yyyy-MM-dd"
+                    required
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block mb-2 font-medium">Check Out</label>
-                <input
-                  type="date"
-                  value={booking.check_out}
-                  onChange={(e) => setBooking({ ...booking, check_out: e.target.value })}
-                  className="w-full border border-slate-200 rounded-2xl px-4 py-3"
-                  required
-                />
+                <div className="w-full relative">
+                  <DatePicker 
+                    selected={booking.check_out ? new Date(`${booking.check_out}T00:00:00`) : null}
+                    onChange={(date) => {
+                      if (date) {
+                        const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                        setBooking({ ...booking, check_out: localDate });
+                      }
+                    }}
+                    excludeDates={bookedDates}
+                    minDate={booking.check_in ? new Date(`${booking.check_in}T00:00:00`) : new Date()}
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3 bg-white"
+                    placeholderText="Select date"
+                    dateFormat="yyyy-MM-dd"
+                    required
+                  />
+                </div>
               </div>
 
               <button className="w-full py-3.5 rounded-2xl bg-rose-500 hover:bg-slate-900 text-white font-semibold transition">
