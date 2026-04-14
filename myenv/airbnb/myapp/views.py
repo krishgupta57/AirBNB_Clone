@@ -79,10 +79,44 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         properties = Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
+        
+        # Query parameters
         search = self.request.query_params.get('search')
         limit = self.request.query_params.get('limit')
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        p_type = self.request.query_params.get('property_type')
+        bedrooms = self.request.query_params.get('bedrooms')
+        bathrooms = self.request.query_params.get('bathrooms')
+        guests = self.request.query_params.get('guests')
+        sort = self.request.query_params.get('sort')
+
+        # Multi-layered Filtering
         if search:
             properties = properties.filter(title__icontains=search) | properties.filter(location__icontains=search)
+        
+        if min_price:
+            properties = properties.filter(price_per_night__gte=min_price)
+        if max_price:
+            properties = properties.filter(price_per_night__lte=max_price)
+        if p_type:
+            properties = properties.filter(property_type=p_type)
+        if bedrooms:
+            properties = properties.filter(bedrooms__gte=bedrooms)
+        if bathrooms:
+            properties = properties.filter(bathrooms__gte=bathrooms)
+        if guests:
+            properties = properties.filter(guests__gte=guests)
+
+        # Sorting
+        if sort == 'price_asc':
+            properties = properties.order_by('price_per_night')
+        elif sort == 'price_desc':
+            properties = properties.order_by('-price_per_night')
+        elif sort == 'newest':
+            properties = properties.order_by('-created_at')
+
+        # Pagination/Limit
         if limit:
             try:
                 properties = properties[:int(limit)]

@@ -8,29 +8,100 @@ import {
   BadgeCheck,
   Clock3,
   Search,
+  SlidersHorizontal,
+  MapPin,
+  X,
+  ChevronRight,
   HeartHandshake,
 } from "lucide-react";
 import API from "../api";
 import PropertyCard from "../components/PropertyCard";
 import SectionTitle from "../components/SectionTitle";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 function Home() {
   const [properties, setProperties] = useState([]);
   const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [filters, setFilters] = useState({
+    min_price: "",
+    max_price: "",
+    property_type: "",
+    bedrooms: "",
+    bathrooms: "",
+    guests: "",
+    sort: "newest",
+  });
 
   const fetchProperties = async () => {
     try {
-      const res = await API.get(`properties/?search=${search}&limit=6`);
+      let url = `properties/?search=${search}&limit=12`;
+      if (filters.min_price) url += `&min_price=${filters.min_price}`;
+      if (filters.max_price) url += `&max_price=${filters.max_price}`;
+      if (filters.property_type) url += `&property_type=${filters.property_type}`;
+      if (filters.bedrooms) url += `&bedrooms=${filters.bedrooms}`;
+      if (filters.bathrooms) url += `&bathrooms=${filters.bathrooms}`;
+      if (filters.guests) url += `&guests=${filters.guests}`;
+      if (filters.sort) url += `&sort=${filters.sort}`;
+
+      const res = await API.get(url);
       setProperties(res.data);
     } catch (error) {
       console.log(error);
     }
   };
 
+  const fetchSuggestions = async (query) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5`);
+      setSuggestions(res.data);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error("Autocomplete error:", error);
+    }
+  };
+
+  // Debounce for autocomplete
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (search) fetchSuggestions(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     fetchProperties();
   }, []);
+
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+
+  const applyFilters = () => {
+    fetchProperties();
+    setShowFilters(false);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      min_price: "",
+      max_price: "",
+      property_type: "",
+      bedrooms: "",
+      bathrooms: "",
+      guests: "",
+      sort: "newest",
+    });
+    setSearch("");
+  };
 
   return (
     <div>
@@ -85,29 +156,153 @@ function Home() {
         </div>
       </section>
 
-      {/* Section 2: Search */}
-      <section className="-mt-10 relative z-10">
+      {/* Section 2: Search & Autocomplete */}
+      <section className="-mt-10 relative z-30">
         <div className="container-custom">
-          <div className="bg-white rounded-3xl shadow-xl p-5 md:p-6 flex flex-col md:flex-row gap-4 items-center">
-            <div className="flex-1 w-full">
-              <input
-                type="text"
-                placeholder="Search by title or location..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full border border-slate-200 rounded-2xl px-5 py-4"
-              />
+          <div className="bg-white rounded-[2rem] shadow-2xl p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex-1 w-full relative">
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-5 py-2">
+                 <MapPin size={20} className="text-slate-400 mr-3" />
+                 <input
+                  type="text"
+                  placeholder="Where are you going?"
+                  value={search}
+                  onFocus={() => setShowSuggestions(true)}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-transparent py-3 outline-none text-slate-700 font-medium"
+                />
+              </div>
+
+              {/* Suggestions Dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 w-full bg-white mt-2 rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-40">
+                  {suggestions.map((item, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => {
+                        setSearch(item.display_name.split(',')[0]);
+                        setShowSuggestions(false);
+                      }}
+                      className="px-5 py-4 hover:bg-slate-50 cursor-pointer flex items-start gap-3 border-b border-slate-50 last:border-0"
+                    >
+                      <MapPin size={18} className="text-rose-500 mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-slate-800">{item.display_name.split(',')[0]}</p>
+                        <p className="text-xs text-slate-500 truncate">{item.display_name}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <button
-              onClick={fetchProperties}
-              className="w-full md:w-auto inline-flex justify-center items-center gap-2 bg-slate-900 hover:bg-rose-500 text-white px-8 py-4 rounded-2xl font-semibold transition"
-            >
-              <Search size={20} />
-              Search Stays
-            </button>
+
+            <div className="flex w-full md:w-auto gap-3">
+              <button
+                onClick={() => setShowFilters(true)}
+                className="flex-1 md:flex-none inline-flex justify-center items-center gap-2 bg-white border-2 border-slate-100 hover:border-rose-500 text-slate-700 w-14 md:w-auto h-14 md:h-auto rounded-2xl font-semibold transition group"
+                title="Filters"
+              >
+                <SlidersHorizontal size={20} className="group-hover:text-rose-500" />
+                <span className="md:hidden lg:inline">Filters</span>
+              </button>
+              
+              <button
+                onClick={fetchProperties}
+                className="flex-[2] md:flex-none inline-flex justify-center items-center gap-2 bg-slate-900 hover:bg-rose-500 text-white px-8 py-4 rounded-2xl font-semibold transition"
+              >
+                <Search size={20} />
+                Search Stays
+              </button>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Filter Modal */}
+      {showFilters && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowFilters(false)}></div>
+          <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-fade-in">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-slate-900">Advanced Filters</h2>
+              <button onClick={() => setShowFilters(false)} className="p-2 hover:bg-slate-100 rounded-full transition">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8 max-h-[70vh] overflow-y-auto space-y-8">
+              {/* Price Range */}
+              <div>
+                <label className="text-lg font-bold text-slate-800 mb-4 block">Price Range (per night)</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Min Price</span>
+                    <input name="min_price" type="number" value={filters.min_price} onChange={handleFilterChange} placeholder="₹ 0" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Max Price</span>
+                    <input name="max_price" type="number" value={filters.max_price} onChange={handleFilterChange} placeholder="₹ 10,000+" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Property Type */}
+              <div>
+                <label className="text-lg font-bold text-slate-800 mb-4 block">Property Type</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {['apartment', 'villa', 'house', 'room'].map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setFilters({ ...filters, property_type: filters.property_type === type ? "" : type })}
+                      className={`py-3 rounded-xl border-2 transition capitalize font-semibold ${filters.property_type === type ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Capacity */}
+              <div>
+                <label className="text-lg font-bold text-slate-800 mb-4 block">Rooms & Guests</label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Guests</span>
+                    <input name="guests" type="number" value={filters.guests} onChange={handleFilterChange} min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Bedrooms</span>
+                    <input name="bedrooms" type="number" value={filters.bedrooms} onChange={handleFilterChange} min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Bathrooms</span>
+                    <input name="bathrooms" type="number" value={filters.bathrooms} onChange={handleFilterChange} min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sorting */}
+              <div>
+                <label className="text-lg font-bold text-slate-800 mb-4 block">Sort By</label>
+                <select name="sort" value={filters.sort} onChange={handleFilterChange} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-medium outline-none">
+                  <option value="newest">Newest First</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-8 bg-slate-50 flex items-center justify-between">
+              <button onClick={clearFilters} className="text-slate-500 font-bold hover:text-slate-900 transition underline underline-offset-4">
+                Clear all filters
+              </button>
+              <button onClick={applyFilters} className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold hover:bg-rose-500 transition shadow-lg shadow-slate-200">
+                Show matches
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Section 3: Categories */}
       <section className="py-12 md:py-20">
