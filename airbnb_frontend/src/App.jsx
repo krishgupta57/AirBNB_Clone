@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import HostDashboard from "./pages/HostDashboard";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyOTP from "./pages/VerifyOTP";
+import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -58,6 +59,7 @@ function App() {
           <Route path="/verify-email/:uidb64/:token" element={<VerifyEmail />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/property/:id" element={<PropertyDetail />} />
+          <Route path="/search" element={<Search />} />
 
           <Route
             path="/host-dashboard"

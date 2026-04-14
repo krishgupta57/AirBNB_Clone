@@ -88,6 +88,29 @@ class BookingSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['user', 'total_price', 'status']
 
+    def validate(self, attrs):
+        check_in = attrs['check_in']
+        check_out = attrs['check_out']
+        property_obj = attrs['property']
+
+        if check_in >= check_out:
+            raise serializers.ValidationError("Check-out date must be after check-in date.")
+
+        overlapping_bookings = Booking.objects.filter(
+            property=property_obj,
+            status='confirmed',
+            check_in__lt=check_out,
+            check_out__gt=check_in
+        )
+        
+        if self.instance:
+            overlapping_bookings = overlapping_bookings.exclude(pk=self.instance.pk)
+
+        if overlapping_bookings.exists():
+            raise serializers.ValidationError("This property is already booked for the selected dates.")
+
+        return attrs
+
 
 class WishlistSerializer(serializers.ModelSerializer):
     property_detail = PropertySerializer(source='property', read_only=True)

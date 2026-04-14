@@ -56,7 +56,8 @@ function PropertyDetail() {
       loadProperty(); // Reload to grey out the newly booked dates!
     } catch (error) {
       console.log(error.response?.data);
-      toast.error("Booking failed");
+      const errorMsg = error.response?.data?.[0] || error.response?.data?.non_field_errors?.[0] || "Booking failed";
+      toast.error(errorMsg);
     }
   };
 
