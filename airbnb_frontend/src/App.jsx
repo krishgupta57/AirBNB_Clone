@@ -18,6 +18,7 @@ import HostDashboard from "./pages/HostDashboard";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyOTP from "./pages/VerifyOTP";
 import Search from "./pages/Search";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -60,6 +61,7 @@ function App() {
           <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/property/:id" element={<PropertyDetail />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/checkout" element={<Checkout />} />
 
           <Route
             path="/host-dashboard"

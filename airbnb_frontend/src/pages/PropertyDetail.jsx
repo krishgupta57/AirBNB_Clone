@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import API from "../api";
 import toast from "react-hot-toast";
 import { getUser } from "../utils/auth";
@@ -7,6 +7,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 function PropertyDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const user = getUser();
 
   const [property, setProperty] = useState(null);
@@ -49,16 +50,11 @@ function PropertyDetail() {
       return toast.error("Please login first");
     }
 
-    try {
-      await API.post("bookings/", booking);
-      toast.success("Booking successful");
-      setBooking({ property: id, check_in: "", check_out: "" });
-      loadProperty(); // Reload to grey out the newly booked dates!
-    } catch (error) {
-      console.log(error.response?.data);
-      const errorMsg = error.response?.data?.[0] || error.response?.data?.non_field_errors?.[0] || "Booking failed";
-      toast.error(errorMsg);
+    if (!booking.check_in || !booking.check_out) {
+      return toast.error("Please select dates first");
     }
+
+    navigate(`/checkout?property=${id}&check_in=${booking.check_in}&check_out=${booking.check_out}`);
   };
 
   const submitReview = async (e) => {
