@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -8,10 +9,41 @@ class User(AbstractUser):
         ('guest', 'Guest'),
         ('host', 'Host'),
     )
+    TIER_CHOICES = (
+        ('trial', 'Trial (2 Listings)'),
+        ('standard', 'Standard (10 Listings)'),
+        ('premium', 'Premium (50 Listings)'),
+        ('ultimate', 'Ultimate (Unlimited)'),
+    )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='guest')
     phone = models.CharField(max_length=15, blank=True, null=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(auto_now=True)
+    subscription_tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='trial')
+    wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    subscription_started_at = models.DateTimeField(default=timezone.now)
+    last_billed_at = models.DateTimeField(default=timezone.now)
+
+    def get_listing_limit(self):
+        limits = {'trial': 2, 'standard': 10, 'premium': 50, 'ultimate': 99999}
+        return limits.get(self.subscription_tier, 2)
+    
+    def get_plan_price(self, tier=None):
+        prices = {'trial': 0, 'standard': 1999, 'premium': 4999, 'ultimate': 9999}
+        t = tier or self.subscription_tier
+        return prices.get(t, 0)
+
+    def sync_listing_limits(self):
+        """Hides recent listings if they exceed the plan limit"""
+        limit = self.get_listing_limit()
+        # Order by created_at so we keep oldest ones and hide most recent ones
+        all_props = self.properties.order_by('created_at')
+        for i, prop in enumerate(all_props):
+            if i >= limit:
+                prop.is_active = False
+            else:
+                prop.is_active = True
+            prop.save()
 
     def __str__(self):
         return self.username
@@ -36,6 +68,8 @@ class Property(models.Model):
     property_type = models.CharField(max_length=20, choices=PROPERTY_TYPES, default='apartment')
     image = models.URLField(blank=True, null=True)
     image_file = models.ImageField(upload_to='property_images/', blank=True, null=True)
+    amenities = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def average_rating(self):
@@ -73,7 +107,7 @@ class Booking(models.Model):
             check_in__lt=self.check_out,
             check_out__gt=self.check_in
         ).exclude(id=self.id)
-
+        
         if overlapping_bookings.exists():
             raise ValidationError("This property is already booked for the selected dates.")
 
@@ -110,3 +144,22 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.property.title}"
+
+
+class SubscriptionTransaction(models.Model):
+    TYPE_CHOICES = (
+        ('purchase', 'Plan Purchase'),
+        ('refund', 'Refund'),
+        ('credit', 'Credit to Wallet'),
+        ('adjustment', 'Prorated Adjustment'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscription_transactions')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    tier_from = models.CharField(max_length=20, blank=True, null=True)
+    tier_to = models.CharField(max_length=20, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.transaction_type} - ₹{self.amount}"

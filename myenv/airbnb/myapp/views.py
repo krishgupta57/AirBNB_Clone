@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets, mixins
@@ -10,7 +11,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 import random
 
-from .models import Property, Booking, Review, Wishlist
+from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -18,7 +19,9 @@ from .serializers import (
     BookingSerializer,
     ReviewSerializer,
     WishlistSerializer,
+    SubscriptionTransactionSerializer,
 )
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -72,6 +75,122 @@ class ProfileView(APIView):
         return Response(serializer.data)
 
 
+class SubscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        plan = request.data.get('plan')
+        action_type = request.data.get('action') # 'purchase', 'credit', 'refund'
+        amount_paid = Decimal(request.data.get('amount', 0))
+        balance_used = Decimal(request.data.get('balance_used', 0))
+
+        if plan not in ['trial', 'standard', 'premium', 'ultimate']:
+            return Response({"error": "Invalid plan selected"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = request.user
+        old_tier = user.subscription_tier
+        
+        # Financial logic
+        if balance_used > 0:
+            user.wallet_balance -= balance_used
+            user.subscription_transactions.create(
+                amount=balance_used,
+                transaction_type='adjustment',
+                description=f"Applied ₹{balance_used} from wallet balance for {plan} upgrade."
+            )
+
+        if action_type == 'credit' and amount_paid < 0:
+            # Downgrade credit to wallet
+            credit_amt = abs(amount_paid)
+            user.wallet_balance += credit_amt
+            user.subscription_transactions.create(
+                amount=credit_amt,
+                transaction_type='credit',
+                tier_from=old_tier,
+                tier_to=plan,
+                description=f"Credited ₹{credit_amt} to wallet after downgrading from {old_tier} to {plan}."
+            )
+        elif action_type == 'refund' and amount_paid < 0:
+            # Downgrade simulated refund
+            refund_amt = abs(amount_paid)
+            user.subscription_transactions.create(
+                amount=refund_amt,
+                transaction_type='refund',
+                tier_from=old_tier,
+                tier_to=plan,
+                description=f"Refund initiated for ₹{refund_amt} after downgrading from {old_tier} to {plan}."
+            )
+        elif amount_paid > 0:
+            # Plan purchase/upgrade
+            user.subscription_transactions.create(
+                amount=amount_paid,
+                transaction_type='purchase',
+                tier_from=old_tier,
+                tier_to=plan,
+                description=f"Upgraded from {old_tier} to {plan}."
+            )
+
+        user.subscription_tier = plan
+        user.last_billed_at = timezone.now()
+        user.save()
+        
+        # Automatically sync visibility based on new plan limits
+        user.sync_listing_limits()
+        
+        return Response({
+            "message": f"Successfully updated to {plan} plan!",
+            "tier": user.subscription_tier,
+            "balance": str(user.wallet_balance)
+        })
+
+
+class SubscriptionQuoteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_plan = request.data.get('plan')
+        if new_plan not in ['trial', 'standard', 'premium', 'ultimate']:
+            return Response({"error": "Invalid plan selected"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        current_plan = user.subscription_tier
+        
+        current_price = Decimal(user.get_plan_price())
+        new_price = Decimal(user.get_plan_price(new_plan))
+        
+        # Proration Calculation (30-day cycle)
+        now = timezone.now()
+        days_used = (now - user.last_billed_at).days
+        days_remaining = Decimal(max(1, 30 - days_used))
+        
+        current_daily_rate = current_price / Decimal(30)
+        new_daily_rate = new_price / Decimal(30)
+        
+        credit_for_unused = (current_daily_rate * days_remaining).quantize(Decimal('0.01'))
+        cost_for_new_remaining = (new_daily_rate * days_remaining).quantize(Decimal('0.01'))
+        
+        total_adjustment = (cost_for_new_remaining - credit_for_unused).quantize(Decimal('0.01'))
+
+        return Response({
+            "current_plan": current_plan,
+            "new_plan": new_plan,
+            "current_credit": str(credit_for_unused),
+            "new_cost_remaining": str(cost_for_new_remaining),
+            "total_adjustment": str(total_adjustment),
+            "wallet_balance": str(user.wallet_balance),
+            "days_remaining": int(days_remaining)
+        })
+
+
+class TransactionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        txs = request.user.subscription_transactions.all().order_by('-created_at')
+        serializer = SubscriptionTransactionSerializer(txs, many=True)
+        return Response(serializer.data)
+
+
 # --- Core ViewSets ---
 
 class PropertyViewSet(viewsets.ModelViewSet):
@@ -79,6 +198,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         properties = Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
+        
+        # Subscription Logic: Only show active properties to guests
+        # Hosts can see their own inactive properties in 'my' endpoint
+        if self.action not in ['my', 'retrieve']:
+            properties = properties.filter(is_active=True)
         
         # Query parameters
         search = self.request.query_params.get('search')

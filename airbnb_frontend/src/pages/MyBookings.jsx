@@ -61,18 +61,26 @@ function MyBookings() {
                 <div>
                   <p className="text-slate-500">Total Amount</p>
                   <h3 className="text-3xl font-bold text-rose-500">₹{booking.total_price}</h3>
-                  <p className={`mt-2 text-sm font-medium capitalize ${booking.status === 'cancelled' ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {booking.status}
-                  </p>
                   
-                  {booking.status !== 'cancelled' && (
-                    <button 
-                      onClick={() => cancelBooking(booking.id)}
-                      className="mt-4 px-4 py-2 border border-rose-500 text-rose-500 text-sm font-semibold rounded-xl hover:bg-rose-50 transition w-full"
-                    >
-                      Cancel Booking
-                    </button>
-                  )}
+                  <div className="flex flex-col gap-2 mt-3">
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest text-center ${
+                      booking.trip_status === 'Upcoming' ? 'bg-blue-100 text-blue-600' :
+                      booking.trip_status === 'Staying' ? 'bg-amber-100 text-amber-600 animate-pulse' :
+                      booking.trip_status === 'Completed' ? 'bg-emerald-100 text-emerald-600' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {booking.trip_status}
+                    </span>
+
+                    {booking.trip_status === 'Upcoming' && booking.status !== 'cancelled' && (
+                      <button 
+                        onClick={() => cancelBooking(booking.id)}
+                        className="mt-2 px-4 py-2 border-2 border-rose-500 text-rose-500 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-rose-500 hover:text-white transition-all w-full"
+                      >
+                        Cancel Booking
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

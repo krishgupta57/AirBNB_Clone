@@ -8,6 +8,9 @@ from .views import (
     PropertyViewSet,
     BookingViewSet,
     ReviewViewSet,
+    SubscriptionView,
+    SubscriptionQuoteView,
+    TransactionView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -24,4 +27,7 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='profile'),
     path('wishlist/', WishlistView.as_view(), name='wishlist'),
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('subscription/', SubscriptionView.as_view(), name='subscription'),
+    path('subscription/quote/', SubscriptionQuoteView.as_view(), name='subscription-quote'),
+    path('transactions/', TransactionView.as_view(), name='transactions'),
 ]

@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Property, Booking, Review, Wishlist
+from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -28,7 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'role']
+        fields = ['id', 'username', 'email', 'phone', 'role', 'subscription_tier', 'wallet_balance']
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -60,10 +61,13 @@ class PropertySerializer(serializers.ModelSerializer):
             'property_type',
             'image',
             'image_file',
+            'amenities',
+            'is_active',
             'created_at',
             'average_rating',
             'reviews',
         ]
+        read_only_fields = ['is_active']
 
     def get_average_rating(self, obj):
         return obj.average_rating()
@@ -72,6 +76,7 @@ class PropertySerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     property_detail = PropertySerializer(source='property', read_only=True)
+    trip_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -84,30 +89,52 @@ class BookingSerializer(serializers.ModelSerializer):
             'check_out',
             'total_price',
             'status',
+            'trip_status',
             'created_at',
         ]
-        read_only_fields = ['user', 'total_price', 'status']
+        read_only_fields = ['user', 'total_price', 'status', 'trip_status']
+
+    def get_trip_status(self, obj):
+        if obj.status == 'cancelled':
+            return 'Cancelled'
+        
+        today = timezone.now().date()
+        if obj.check_out < today:
+            return 'Completed'
+        if obj.check_in <= today <= obj.check_out:
+            return 'Staying'
+        return 'Upcoming'
 
     def validate(self, attrs):
-        check_in = attrs['check_in']
-        check_out = attrs['check_out']
-        property_obj = attrs['property']
+        user = self.context['request'].user
+        check_in = attrs.get('check_in') # Only present if booking
+        check_out = attrs.get('check_out')
 
-        if check_in >= check_out:
-            raise serializers.ValidationError("Check-out date must be after check-in date.")
+        # If we are validating a Property creation
+        if 'title' in attrs:
+            # Check listing limit (only for new listings)
+            if not self.instance:
+                limit = user.get_listing_limit()
+                current_count = user.properties.count()
+                if current_count >= limit:
+                    raise serializers.ValidationError(f"Your {user.subscription_tier} plan limit of {limit} listings has been reached. Please upgrade to add more.")
 
-        overlapping_bookings = Booking.objects.filter(
-            property=property_obj,
-            status='confirmed',
-            check_in__lt=check_out,
-            check_out__gt=check_in
-        )
-        
-        if self.instance:
-            overlapping_bookings = overlapping_bookings.exclude(pk=self.instance.pk)
-
-        if overlapping_bookings.exists():
-            raise serializers.ValidationError("This property is already booked for the selected dates.")
+            # Amenity Gating Logic
+            amenities = attrs.get('amenities', [])
+            
+            # Map tiers to allowed amenities
+            TIER_AMENITIES = {
+                'trial': ['WiFi', 'Kitchen', 'Essentials'],
+                'standard': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace'],
+                'premium': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace', 'Gym', 'Parking', 'Breakfast', 'Private Entrance'],
+                'ultimate': None # Unlimited
+            }
+            
+            allowed = TIER_AMENITIES.get(user.subscription_tier)
+            if allowed is not None: # ultimate is None (Unlimited)
+                for am in amenities:
+                    if am not in allowed:
+                        raise serializers.ValidationError(f"The amenity '{am}' is not available in your {user.subscription_tier} plan. Please upgrade to unlock it.")
 
         return attrs
 
@@ -118,3 +145,9 @@ class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
         fields = ['id', 'property', 'property_detail']
+
+
+class SubscriptionTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionTransaction
+        fields = '__all__'

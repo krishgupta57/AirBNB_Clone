@@ -19,6 +19,9 @@ import VerifyEmail from "./pages/VerifyEmail";
 import VerifyOTP from "./pages/VerifyOTP";
 import Search from "./pages/Search";
 import Checkout from "./pages/Checkout";
+import Pricing from "./pages/Pricing";
+import SubscriptionCheckout from "./pages/SubscriptionCheckout";
+import Wallet from "./pages/Wallet";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -62,6 +65,15 @@ function App() {
           <Route path="/property/:id" element={<PropertyDetail />} />
           <Route path="/search" element={<Search />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route 
+            path="/subscription-checkout" 
+            element={
+              <ProtectedRoute>
+                <SubscriptionCheckout />
+              </ProtectedRoute>
+            } 
+          />
 
           <Route
             path="/host-dashboard"
@@ -77,6 +89,15 @@ function App() {
             element={
               <HostRoute>
                 <AddProperty />
+              </HostRoute>
+            }
+          />
+          
+          <Route
+            path="/wallet"
+            element={
+              <HostRoute>
+                <Wallet />
               </HostRoute>
             }
           />
