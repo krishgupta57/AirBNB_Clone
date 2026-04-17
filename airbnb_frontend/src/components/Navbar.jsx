@@ -113,9 +113,15 @@ function Navbar() {
 
         {/* 3. Global Actions & User Profile */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <Link to="/pricing" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition">
-            Become a host
-          </Link>
+          {user?.role === 'host' ? (
+            <Link to="/add-property" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition">
+              Add Property
+            </Link>
+          ) : (
+            <Link to="/pricing" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition">
+              Become a host
+            </Link>
+          )}
 
           <div className="relative" ref={menuRef}>
             <button 

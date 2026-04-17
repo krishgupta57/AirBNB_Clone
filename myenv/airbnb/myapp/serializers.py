@@ -68,6 +68,31 @@ class PropertySerializer(serializers.ModelSerializer):
             'reviews',
         ]
         read_only_fields = ['is_active']
+    
+    def validate(self, attrs):
+        user = self.context['request'].user
+        
+        # Check listing limit (only for new listings)
+        if not self.instance:
+            limit = user.get_listing_limit()
+            current_count = user.properties.count()
+            if current_count >= limit:
+                raise serializers.ValidationError(f"Your {user.subscription_tier} plan limit of {limit} listings has been reached. Please upgrade to add more.")
+
+        # Amenity Gating Logic
+        amenities = attrs.get('amenities', [])
+        TIER_AMENITIES = {
+            'trial': ['WiFi', 'Kitchen', 'Essentials'],
+            'standard': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace'],
+            'premium': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace', 'Gym', 'Parking', 'Breakfast', 'Private Entrance'],
+            'ultimate': None # Unlimited
+        }
+        allowed = TIER_AMENITIES.get(user.subscription_tier)
+        if allowed is not None:
+            for am in amenities:
+                if am not in allowed:
+                    raise serializers.ValidationError(f"The amenity '{am}' is not available in your {user.subscription_tier} plan. Please upgrade to unlock it.")
+        return attrs
 
     def get_average_rating(self, obj):
         return obj.average_rating()
@@ -106,36 +131,12 @@ class BookingSerializer(serializers.ModelSerializer):
         return 'Upcoming'
 
     def validate(self, attrs):
-        user = self.context['request'].user
-        check_in = attrs.get('check_in') # Only present if booking
+        # Basic check-in/out validation if present
+        check_in = attrs.get('check_in')
         check_out = attrs.get('check_out')
-
-        # If we are validating a Property creation
-        if 'title' in attrs:
-            # Check listing limit (only for new listings)
-            if not self.instance:
-                limit = user.get_listing_limit()
-                current_count = user.properties.count()
-                if current_count >= limit:
-                    raise serializers.ValidationError(f"Your {user.subscription_tier} plan limit of {limit} listings has been reached. Please upgrade to add more.")
-
-            # Amenity Gating Logic
-            amenities = attrs.get('amenities', [])
-            
-            # Map tiers to allowed amenities
-            TIER_AMENITIES = {
-                'trial': ['WiFi', 'Kitchen', 'Essentials'],
-                'standard': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace'],
-                'premium': ['WiFi', 'Kitchen', 'Essentials', 'TV', 'Air Conditioning', 'Dedicated Workspace', 'Gym', 'Parking', 'Breakfast', 'Private Entrance'],
-                'ultimate': None # Unlimited
-            }
-            
-            allowed = TIER_AMENITIES.get(user.subscription_tier)
-            if allowed is not None: # ultimate is None (Unlimited)
-                for am in amenities:
-                    if am not in allowed:
-                        raise serializers.ValidationError(f"The amenity '{am}' is not available in your {user.subscription_tier} plan. Please upgrade to unlock it.")
-
+        if check_in and check_out:
+            if check_in >= check_out:
+                raise serializers.ValidationError("Check-out date must be after check-in date.")
         return attrs
 
 

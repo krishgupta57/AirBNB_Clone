@@ -55,7 +55,7 @@ function App() {
         }}
       />
       <Navbar />
-      <main className="flex-1">
+      <main className="flex-1 pt-20">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

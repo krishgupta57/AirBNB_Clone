@@ -17,6 +17,7 @@ function EditProperty() {
     guests: 1,
     property_type: "apartment",
     image: "",
+    amenities: [],
   });
 
   const [imageFile, setImageFile] = useState(null);
@@ -52,9 +53,13 @@ function EditProperty() {
     
     const formData = new FormData();
     // Only send fields that exist in the form state
-    const allowedFields = ['title', 'description', 'location', 'price_per_night', 'bedrooms', 'bathrooms', 'guests', 'property_type'];
+    const allowedFields = ['title', 'description', 'location', 'price_per_night', 'bedrooms', 'bathrooms', 'guests', 'property_type', 'amenities'];
     allowedFields.forEach(key => {
-      formData.append(key, form[key]);
+      if (key === "amenities") {
+        formData.append(key, JSON.stringify(form[key]));
+      } else {
+        formData.append(key, form[key]);
+      }
     });
 
     if (imageChoice === "file") {
@@ -78,8 +83,15 @@ function EditProperty() {
           return "property updated successfully!";
         },
         error: (err) => {
-          console.error(err);
-          return err.response?.data?.error || "failed to update property";
+          const data = err.response?.data;
+          if (typeof data === "string") return data;
+          if (data?.error) return data.error;
+          if (typeof data === "object") {
+            const firstKey = Object.keys(data)[0];
+            const firstError = data[firstKey];
+            return Array.isArray(firstError) ? `${firstKey}: ${firstError[0]}` : `${firstKey}: ${firstError}`;
+          }
+          return "Failed to update property";
         },
       }
     );
@@ -99,12 +111,49 @@ function EditProperty() {
           <input name="bathrooms" type="number" value={form.bathrooms} onChange={handleChange} className="border border-slate-200 rounded-2xl px-4 py-3" required />
           <input name="guests" type="number" value={form.guests} onChange={handleChange} className="border border-slate-200 rounded-2xl px-4 py-3" required />
 
-          <select name="property_type" value={form.property_type} onChange={handleChange} className="border border-slate-200 rounded-2xl px-4 py-3">
-            <option value="apartment">Apartment</option>
-            <option value="villa">Villa</option>
-            <option value="house">House</option>
-            <option value="room">Room</option>
-          </select>
+          <div className="md:col-span-2 space-y-3 mb-2">
+            <label className="block text-sm font-bold text-slate-700">Property Type</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {["apartment", "villa", "house", "room"].map((type) => (
+                <div 
+                  key={type}
+                  onClick={() => setForm({ ...form, property_type: type })}
+                  className={`p-3 rounded-xl border-2 cursor-pointer text-center transition-all ${
+                    form.property_type === type 
+                      ? 'border-rose-500 bg-rose-50 text-rose-600' 
+                      : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-100'
+                  }`}
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-widest">{type}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:col-span-2 space-y-3 py-4 border-t border-slate-100 mt-2">
+            <label className="block font-semibold text-slate-700">Amenities</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {["WiFi", "Kitchen", "Essentials", "TV", "Air Conditioning", "Dedicated Workspace", "Gym", "Parking", "Breakfast", "Private Entrance", "Pool", "Hot Tub", "EV Charging", "Helipad", "Airport Shuttle"].map((am) => {
+                const isSelected = form.amenities?.includes(am);
+                return (
+                  <div 
+                    key={am}
+                    onClick={() => {
+                      const newAm = isSelected 
+                        ? form.amenities.filter(a => a !== am)
+                        : [...(form.amenities || []), am];
+                      setForm({...form, amenities: newAm});
+                    }}
+                    className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-xs font-bold text-center ${
+                      isSelected ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-slate-50 bg-slate-50 text-slate-400'
+                    }`}
+                  >
+                    {am}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="md:col-span-2 space-y-4 py-4 border-t border-slate-100 mt-2">
             <label className="block font-semibold text-slate-700 mb-2">Image Option:</label>

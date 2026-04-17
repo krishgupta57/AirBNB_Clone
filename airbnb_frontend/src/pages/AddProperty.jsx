@@ -119,7 +119,17 @@ function AddProperty() {
           navigate("/my-properties");
           return "Property added successfully!";
         },
-        error: (err) => err.response?.data?.[0] || err.response?.data?.error || "Failed to add property",
+        error: (err) => {
+          const data = err.response?.data;
+          if (typeof data === "string") return data;
+          if (data?.error) return data.error;
+          if (typeof data === "object") {
+            const firstKey = Object.keys(data)[0];
+            const firstError = data[firstKey];
+            return Array.isArray(firstError) ? `${firstKey}: ${firstError[0]}` : `${firstKey}: ${firstError}`;
+          }
+          return "Failed to add property";
+        },
       }
     );
   };
@@ -150,9 +160,28 @@ function AddProperty() {
         )}
 
         <form onSubmit={submitForm} className="grid md:grid-cols-2 gap-6">
+          <div className="md:col-span-2 space-y-4 mb-4">
+            <label className="block text-sm font-black text-slate-700 uppercase tracking-widest ml-1">What type of place is this?</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {["apartment", "villa", "house", "room"].map((type) => (
+                <div 
+                  key={type}
+                  onClick={() => setForm({ ...form, property_type: type })}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer text-center transition-all ${
+                    form.property_type === type 
+                      ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md scale-105' 
+                      : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <p className="text-xs font-black uppercase tracking-widest">{type}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="md:col-span-2">
             <label className="block text-sm font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Title</label>
-            <input name="title" placeholder="e.g. Luxury Seaview Villa" onChange={handleChange} className="w-full border-2 border-slate-50 bg-slate-50/50 rounded-2xl px-5 py-4 font-medium outline-none focus:border-rose-500 focus:bg-white transition" required />
+            <input name="title" value={form.title} placeholder="e.g. Luxury Seaview Villa" onChange={handleChange} className="w-full border-2 border-slate-50 bg-slate-50/50 rounded-2xl px-5 py-4 font-medium outline-none focus:border-rose-500 focus:bg-white transition" required />
           </div>
 
           <div className="md:col-span-2">
