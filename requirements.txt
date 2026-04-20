@@ -1,0 +1,12 @@
+Django>=6.0.3
+django-cors-headers
+djangorestframework
+djangorestframework-simplejwt
+python-dotenv
+dj-database-url
+gunicorn
+whitenoise
+mysqlclient
+mysql-connector-python
+Pillow
+requests
