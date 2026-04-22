@@ -29,7 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'role', 'subscription_tier', 'wallet_balance']
+        fields = ['id', 'username', 'email', 'phone', 'role', 'subscription_tier', 'wallet_balance', 'is_staff']
 
 
 class ReviewSerializer(serializers.ModelSerializer):

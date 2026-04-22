@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'myapp',
     'rest_framework',
     'corsheaders',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -148,6 +149,37 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AirBNB Professional Hosting API',
+    'DESCRIPTION': 'Comprehensive API for managing properties, bookings, and tiered host subscriptions.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_PATCH': True,
+    'COMPONENT_SPLIT_CREATE': True,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SECURITY': [
+        {
+            'jwt': [],
+        }
+    ],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'jwt': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+    },
+    'SERVE_PUBLIC': True,
 }
 
 SIMPLE_JWT = {
@@ -163,4 +195,4 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')

@@ -11,6 +11,8 @@ from .views import (
     SubscriptionView,
     SubscriptionQuoteView,
     TransactionView,
+    AdminStatsView,
+    AdminUserListView,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -30,4 +32,6 @@ urlpatterns = [
     path('subscription/', SubscriptionView.as_view(), name='subscription'),
     path('subscription/quote/', SubscriptionQuoteView.as_view(), name='subscription-quote'),
     path('transactions/', TransactionView.as_view(), name='transactions'),
+    path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('admin/users/', AdminUserListView.as_view(), name='admin-users'),
 ]

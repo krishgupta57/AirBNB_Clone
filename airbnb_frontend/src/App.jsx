@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HostRoute from "./components/HostRoute";
+import AdminRoute from "./components/AdminRoute";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -22,6 +23,8 @@ import Checkout from "./pages/Checkout";
 import Pricing from "./pages/Pricing";
 import SubscriptionCheckout from "./pages/SubscriptionCheckout";
 import Wallet from "./pages/Wallet";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUserManagement from "./pages/AdminUserManagement";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -144,6 +147,24 @@ function App() {
               <ProtectedRoute>
                 <Profile />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUserManagement />
+              </AdminRoute>
             }
           />
 

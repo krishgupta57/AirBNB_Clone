@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe } from "lucide-react";
+import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getUser, logoutUser } from "../utils/auth";
 import toast from "react-hot-toast";
@@ -114,11 +114,11 @@ function Navbar() {
         {/* 3. Global Actions & User Profile */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {user?.role === 'host' ? (
-            <Link to="/add-property" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition">
-              Add Property
+            <Link to="/pricing" className="hidden sm:block text-sm font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 px-5 py-3 rounded-full transition shadow-sm border border-rose-100">
+              Upgrade Plan
             </Link>
           ) : (
-            <Link to="/pricing" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition">
+            <Link to="/pricing" className="hidden sm:block text-sm font-bold text-slate-700 hover:bg-slate-50 px-4 py-3 rounded-full transition border border-transparent">
               Become a host
             </Link>
           )}
@@ -166,6 +166,19 @@ function Navbar() {
                       <LayoutDashboard size={16} className="text-slate-400" />
                       {user.role === 'host' ? 'Host Dashboard' : 'My Trips'}
                     </Link>
+
+                    {user.is_staff && (
+                      <>
+                        <Link to="/admin/dashboard" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-rose-600 bg-rose-50/50 hover:bg-rose-50 transition border-y border-rose-100/50" onClick={() => setIsMenuOpen(false)}>
+                          <BarChart3 size={16} className="text-rose-500" />
+                          Admin Dashboard
+                        </Link>
+                        <Link to="/admin/users" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition border-b border-slate-100" onClick={() => setIsMenuOpen(false)}>
+                          <Users size={16} className="text-slate-400" />
+                          Manage Users
+                        </Link>
+                      </>
+                    )}
                     
                     <Link to="/wishlist" className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition" onClick={() => setIsMenuOpen(false)}>
                       <Heart size={16} className="text-slate-400" />

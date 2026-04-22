@@ -47,7 +47,11 @@ function Login() {
       console.log("Saved user:", localStorage.getItem("user"));
 
       toast.success("Login successful");
-      navigate("/");
+      if (profileRes.data.is_staff) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
       window.location.reload();
     } catch (error) {
       console.log("Login error:", error.response?.data || error.message);

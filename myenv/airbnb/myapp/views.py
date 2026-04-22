@@ -4,11 +4,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db.models import Sum, Count
 import random
 
 from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction
@@ -69,6 +70,7 @@ class VerifyOTPView(APIView):
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
 
     def get(self, request):
         serializer = UserSerializer(request.user)
@@ -184,6 +186,7 @@ class SubscriptionQuoteView(APIView):
 
 class TransactionView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = SubscriptionTransactionSerializer
 
     def get(self, request):
         txs = request.user.subscription_transactions.all().order_by('-created_at')
@@ -395,3 +398,91 @@ class WishlistView(APIView):
             item.delete()
             return Response({"message": "Removed from wishlist"}, status=status.HTTP_200_OK)
         return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+# --- Admin Analytics ---
+
+class AdminStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    # This view returns a custom complex object, so we let spectacular infer or use a mock
+
+
+    def get(self, request):
+        # 1. Financials
+        confirmed_bookings = Booking.objects.filter(status='confirmed')
+        total_booking_revenue = confirmed_bookings.aggregate(total=Sum('total_price'))['total'] or 0
+        platform_fee_income = (Decimal(total_booking_revenue) * Decimal('0.10')).quantize(Decimal('0.01'))
+        
+        subscription_revenue = SubscriptionTransaction.objects.filter(
+            transaction_type__in=['purchase', 'adjustment']
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        # 2. Users
+        total_hosts = User.objects.filter(role='host').count()
+        total_guests = User.objects.filter(role='guest').count()
+        
+        # 3. Listings
+        total_listings = Property.objects.count()
+        active_listings = Property.objects.filter(is_active=True).count()
+        
+        # 4. Recent Activity
+        recent_bookings = BookingSerializer(Booking.objects.order_by('-created_at')[:5], many=True).data
+        recent_properties = PropertySerializer(Property.objects.order_by('-created_at')[:5], many=True).data
+
+        return Response({
+            "financials": {
+                "total_booking_revenue": str(total_booking_revenue),
+                "platform_fee_income": str(platform_fee_income),
+                "subscription_revenue": str(subscription_revenue),
+                "total_platform_revenue": str(Decimal(platform_fee_income) + Decimal(subscription_revenue))
+            },
+            "users": {
+                "total_hosts": total_hosts,
+                "total_guests": total_guests,
+                "total_users": User.objects.count()
+            },
+            "listings": {
+                "total": total_listings,
+                "active": active_listings,
+                "inactive": total_listings - active_listings
+            },
+            "recent_activity": {
+                "bookings": recent_bookings,
+                "properties": recent_properties
+            }
+        })
+
+class AdminUserListView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        users = User.objects.annotate(listing_count=Count('properties')).order_by('-date_joined')
+        
+        # Categorize
+        hosts = users.filter(role='host')
+        guests = users.filter(role='guest')
+
+        host_data = []
+        for h in hosts:
+            host_data.append({
+                "id": h.id,
+                "username": h.username,
+                "email": h.email,
+                "listing_count": h.listing_count,
+                "tier": h.subscription_tier,
+                "date_joined": h.date_joined
+            })
+
+        guest_data = []
+        for g in guests:
+            guest_data.append({
+                "id": g.id,
+                "username": g.username,
+                "email": g.email,
+                "date_joined": g.date_joined
+            })
+
+        return Response({
+            "hosts": host_data,
+            "guests": guest_data,
+            "total_count": users.count()
+        })
