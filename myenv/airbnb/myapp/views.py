@@ -1,4 +1,5 @@
 from django.utils import timezone
+from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets, mixins
@@ -203,8 +204,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
         properties = Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
         
         # Subscription Logic: Only show active properties to guests
-        # Hosts can see their own inactive properties in 'my' endpoint
-        if self.action not in ['my', 'retrieve']:
+        # Admins can see everything, hosts can see their own
+        if not self.request.user.is_staff and self.action not in ['my', 'retrieve']:
             properties = properties.filter(is_active=True)
         
         # Query parameters
@@ -337,11 +338,16 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Booking.objects.filter(user=self.request.user).select_related(
+        queryset = Booking.objects.select_related(
             'user', 'property', 'property__host'
         ).prefetch_related(
             'property__reviews', 'property__reviews__user'
         ).order_by('-created_at')
+
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(user=self.request.user)
+            
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -425,8 +431,16 @@ class AdminStatsView(APIView):
         active_listings = Property.objects.filter(is_active=True).count()
         
         # 4. Recent Activity
-        recent_bookings = BookingSerializer(Booking.objects.order_by('-created_at')[:5], many=True).data
-        recent_properties = PropertySerializer(Property.objects.order_by('-created_at')[:5], many=True).data
+        recent_bookings = BookingSerializer(
+            Booking.objects.order_by('-created_at')[:5], 
+            many=True, 
+            context={'request': request}
+        ).data
+        recent_properties = PropertySerializer(
+            Property.objects.order_by('-created_at')[:5], 
+            many=True, 
+            context={'request': request}
+        ).data
 
         return Response({
             "financials": {

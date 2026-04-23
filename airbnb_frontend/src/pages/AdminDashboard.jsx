@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import API from "../api";
 import { 
   Users, 
@@ -183,7 +184,7 @@ function AdminDashboard() {
               <Calendar size={20} className="text-rose-500" />
               Recent Bookings
             </h3>
-            <button className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-slate-900 transition">View All</button>
+            <Link to="/admin/all-data" className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-slate-900 transition underline underline-offset-4 decoration-rose-500/20">View All</Link>
           </div>
           <div className="space-y-6">
             {stats.recent_activity.bookings.map((booking) => (
@@ -213,7 +214,7 @@ function AdminDashboard() {
               <Home size={20} className="text-rose-500" />
               New Listings
             </h3>
-            <button className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-slate-900 transition">Manage</button>
+            <Link to="/admin/all-data" className="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-slate-900 transition underline underline-offset-4 decoration-rose-500/20">Manage</Link>
           </div>
           <div className="space-y-6">
             {stats.recent_activity.properties.map((prop) => (

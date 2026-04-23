@@ -25,6 +25,9 @@ import SubscriptionCheckout from "./pages/SubscriptionCheckout";
 import Wallet from "./pages/Wallet";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
+import AdminBookingManagement from "./pages/AdminBookingManagement";
+import AdminListingManagement from "./pages/AdminListingManagement";
+import AdminDataManagement from "./pages/AdminDataManagement";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -164,6 +167,33 @@ function App() {
             element={
               <AdminRoute>
                 <AdminUserManagement />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/bookings"
+            element={
+              <AdminRoute>
+                <AdminBookingManagement />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/listings"
+            element={
+              <AdminRoute>
+                <AdminListingManagement />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/all-data"
+            element={
+              <AdminRoute>
+                <AdminDataManagement />
               </AdminRoute>
             }
           />

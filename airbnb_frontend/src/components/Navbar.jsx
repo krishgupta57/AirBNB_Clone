@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users } from "lucide-react";
+import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { getUser, logoutUser } from "../utils/auth";
 import toast from "react-hot-toast";
@@ -113,7 +113,11 @@ function Navbar() {
 
         {/* 3. Global Actions & User Profile */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          {user?.role === 'host' ? (
+          {user?.is_staff ? (
+            <Link to="/admin/users" className="hidden sm:block text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 px-5 py-3 rounded-full transition shadow-md border border-slate-900">
+              Manage Users
+            </Link>
+          ) : user?.role === 'host' ? (
             <Link to="/pricing" className="hidden sm:block text-sm font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 px-5 py-3 rounded-full transition shadow-sm border border-rose-100">
               Upgrade Plan
             </Link>
@@ -172,6 +176,10 @@ function Navbar() {
                         <Link to="/admin/dashboard" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-rose-600 bg-rose-50/50 hover:bg-rose-50 transition border-y border-rose-100/50" onClick={() => setIsMenuOpen(false)}>
                           <BarChart3 size={16} className="text-rose-500" />
                           Admin Dashboard
+                        </Link>
+                        <Link to="/admin/all-data" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition border-b border-slate-100" onClick={() => setIsMenuOpen(false)}>
+                          <ClipboardList size={16} className="text-slate-400" />
+                          Platform Audit
                         </Link>
                         <Link to="/admin/users" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition border-b border-slate-100" onClick={() => setIsMenuOpen(false)}>
                           <Users size={16} className="text-slate-400" />

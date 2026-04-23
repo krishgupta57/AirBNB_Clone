@@ -66,8 +66,11 @@ class PropertySerializer(serializers.ModelSerializer):
             'created_at',
             'average_rating',
             'reviews',
+            'host_username',
         ]
         read_only_fields = ['is_active']
+
+    host_username = serializers.CharField(source='host.username', read_only=True)
     
     def validate(self, attrs):
         user = self.context['request'].user
@@ -96,6 +99,13 @@ class PropertySerializer(serializers.ModelSerializer):
 
     def get_average_rating(self, obj):
         return obj.average_rating()
+    
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Ensure image has full URL if it's a file
+        if instance.image_file:
+            ret['image'] = self.context['request'].build_absolute_uri(instance.image_file.url)
+        return ret
 
 
 class BookingSerializer(serializers.ModelSerializer):
