@@ -118,7 +118,7 @@ function AdminDashboard() {
         <div className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-100 border border-slate-50">
           <h3 className="text-xl font-black mb-6 text-slate-800">User Distribution</h3>
           <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={userChartData}
@@ -160,7 +160,7 @@ function AdminDashboard() {
             </div>
           </div>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={listingChartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 700}} />

@@ -104,9 +104,9 @@ function AdminUserManagement() {
                              <td className="px-8 py-6">
                                 <div className="flex items-center gap-3">
                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black uppercase text-sm">
-                                      {u.username[0]}
+                                      {u.username?.[0] || "?"}
                                    </div>
-                                   <p className="font-black text-slate-900">{u.username}</p>
+                                   <p className="font-black text-slate-900">{u.username || "Unknown"}</p>
                                 </div>
                              </td>
                              <td className="px-8 py-6">
