@@ -11,7 +11,7 @@ function AdminBookingManagement() {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const res = await API.get("bookings/");
+        const res = await API.get("bookings/?admin_view=true");
         setBookings(res.data);
       } catch (err) {
         toast.error("Failed to load booking history");

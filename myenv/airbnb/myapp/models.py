@@ -8,6 +8,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('guest', 'Guest'),
         ('host', 'Host'),
+        ('admin', 'Admin'),
     )
     TIER_CHOICES = (
         ('trial', 'Trial (2 Listings)'),
@@ -23,6 +24,8 @@ class User(AbstractUser):
     wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     subscription_started_at = models.DateTimeField(default=timezone.now)
     last_billed_at = models.DateTimeField(default=timezone.now)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(max_length=500, blank=True)
 
     def get_listing_limit(self):
         limits = {'trial': 2, 'standard': 10, 'premium': 50, 'ultimate': 99999}
@@ -44,6 +47,14 @@ class User(AbstractUser):
             else:
                 prop.is_active = True
             prop.save()
+
+    def save(self, *args, **kwargs):
+        if self.role == 'admin':
+            self.is_staff = True
+            self.is_superuser = True
+        elif self.is_staff:
+            self.role = 'admin'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username

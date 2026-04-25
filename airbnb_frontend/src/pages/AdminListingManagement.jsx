@@ -11,7 +11,7 @@ function AdminListingManagement() {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const res = await API.get("properties/");
+        const res = await API.get("properties/?admin_view=true");
         setProperties(res.data);
       } catch (err) {
         toast.error("Failed to load property listings");

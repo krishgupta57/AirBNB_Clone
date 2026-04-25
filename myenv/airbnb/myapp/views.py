@@ -34,6 +34,9 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
+        if user.role == 'admin':
+            user.is_staff = True
+            user.is_superuser = True
         otp = str(random.randint(100000, 999999))
         user.otp = otp
         user.save()
@@ -76,6 +79,13 @@ class ProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubscriptionView(APIView):
@@ -203,9 +213,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         properties = Property.objects.select_related('host').prefetch_related('reviews', 'reviews__user').order_by('-created_at')
         
-        # Subscription Logic: Only show active properties to guests
-        # Admins can see everything, hosts can see their own
-        if not self.request.user.is_staff and self.action not in ['my', 'retrieve']:
+        # Logic: 
+        # 1. Staff with ?admin_view=true can see EVERYTHING (active & private)
+        # 2. Others (Guests/Hosts) or Staff in regular view see only active ones
+        is_admin_view = self.request.query_params.get('admin_view') == 'true' and self.request.user.is_staff
+        
+        if not is_admin_view and self.action not in ['my', 'retrieve']:
             properties = properties.filter(is_active=True)
         
         # Query parameters
@@ -344,7 +357,9 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
             'property__reviews', 'property__reviews__user'
         ).order_by('-created_at')
 
-        if not self.request.user.is_staff:
+        is_admin_view = self.request.query_params.get('admin_view') == 'true' and self.request.user.is_staff
+        
+        if not is_admin_view:
             queryset = queryset.filter(user=self.request.user)
             
         return queryset
@@ -363,9 +378,16 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
         return Response({"message": "Booking cancelled successfully"})
 
 
-class ReviewViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class ReviewViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        is_admin_view = self.request.query_params.get('admin_view') == 'true' and self.request.user.is_staff
+        
+        if is_admin_view:
+            return Review.objects.all().order_by('-created_at')
+        return Review.objects.filter(user=self.request.user).order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -481,9 +503,13 @@ class AdminUserListView(APIView):
                 "id": h.id,
                 "username": h.username,
                 "email": h.email,
+                "phone": h.phone,
+                "wallet_balance": float(h.wallet_balance),
                 "listing_count": h.listing_count,
                 "tier": h.subscription_tier,
-                "date_joined": h.date_joined
+                "date_joined": h.date_joined,
+                "avatar": request.build_absolute_uri(h.avatar.url) if h.avatar else None,
+                "bio": h.bio
             })
 
         guest_data = []
@@ -492,7 +518,11 @@ class AdminUserListView(APIView):
                 "id": g.id,
                 "username": g.username,
                 "email": g.email,
-                "date_joined": g.date_joined
+                "phone": g.phone,
+                "wallet_balance": float(g.wallet_balance),
+                "date_joined": g.date_joined,
+                "avatar": request.build_absolute_uri(g.avatar.url) if g.avatar else None,
+                "bio": g.bio
             })
 
         return Response({
@@ -500,3 +530,29 @@ class AdminUserListView(APIView):
             "guests": guest_data,
             "total_count": users.count()
         })
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        master_key = request.data.get('master_key')
+        
+        # Secret Setup: If you have the master key, you can promote yourself
+        # In production, this should be in settings.py / env
+        SECRET_MASTER_KEY = "AIRBNB_GENESIS_2026" 
+        
+        if master_key == SECRET_MASTER_KEY:
+            target_user = request.user if not user_id else get_object_or_404(User, id=user_id)
+            target_user.role = 'admin'
+            target_user.is_staff = True
+            target_user.is_superuser = True
+            target_user.save()
+            return Response({"message": f"User {target_user.username} has been promoted to Admin via Master Key."})
+
+        if not request.user.is_staff:
+             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(User, id=user_id)
+        user.role = 'admin'
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
+        return Response({"message": f"User {user.username} promoted to Admin successfully"})

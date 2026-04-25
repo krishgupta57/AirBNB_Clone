@@ -28,6 +28,7 @@ import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminBookingManagement from "./pages/AdminBookingManagement";
 import AdminListingManagement from "./pages/AdminListingManagement";
 import AdminDataManagement from "./pages/AdminDataManagement";
+import AdminSecretSetup from "./pages/AdminSecretSetup";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -198,6 +199,7 @@ function App() {
             }
           />
 
+          <Route path="/admin-genesis-setup-2026" element={<AdminSecretSetup />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

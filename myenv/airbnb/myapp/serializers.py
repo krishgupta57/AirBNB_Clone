@@ -29,7 +29,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'role', 'subscription_tier', 'wallet_balance', 'is_staff']
+        fields = ['id', 'username', 'email', 'phone', 'role', 'subscription_tier', 'wallet_balance', 'is_staff', 'avatar', 'bio']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.avatar:
+            request = self.context.get('request')
+            if request:
+                ret['avatar'] = request.build_absolute_uri(instance.avatar.url)
+        return ret
 
 
 class ReviewSerializer(serializers.ModelSerializer):

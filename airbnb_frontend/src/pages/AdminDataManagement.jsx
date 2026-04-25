@@ -12,7 +12,9 @@ import {
   ShieldAlert,
   ClipboardList,
   Building2,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  Clock
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -20,6 +22,7 @@ function AdminDataManagement() {
   const [activeTab, setActiveTab] = useState("bookings");
   const [bookings, setBookings] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -27,12 +30,14 @@ function AdminDataManagement() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [bookRes, propRes] = await Promise.all([
-          API.get("bookings/"),
-          API.get("properties/")
+        const [bookRes, propRes, revRes] = await Promise.all([
+          API.get("bookings/?admin_view=true"),
+          API.get("properties/?admin_view=true"),
+          API.get("reviews/?admin_view=true")
         ]);
         setBookings(bookRes.data);
         setProperties(propRes.data);
+        setReviews(revRes.data);
       } catch (err) {
         toast.error("Failed to load management data");
       } finally {
@@ -49,9 +54,9 @@ function AdminDataManagement() {
   );
 
   const filteredBookings = bookings.filter(b => 
-    (b.property_detail.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (b.property_detail.host_username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (b.user.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.property_detail?.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.property_detail?.host_username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (b.user?.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.id.toString().includes(searchTerm)
   );
 
@@ -59,6 +64,12 @@ function AdminDataManagement() {
     (p.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.host_username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.location || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredReviews = reviews.filter(r => 
+    (r.user?.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.comment || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.id.toString().includes(searchTerm)
   );
 
   return (
@@ -73,21 +84,30 @@ function AdminDataManagement() {
         <div className="bg-slate-100 p-1.5 rounded-3xl flex items-center shadow-inner w-full lg:w-auto">
            <button 
              onClick={() => { setActiveTab("bookings"); setSearchTerm(""); }}
-             className={`flex-1 lg:w-48 flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black text-sm transition-all duration-300 ${
+             className={`flex-1 lg:w-40 flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black text-sm transition-all duration-300 ${
                activeTab === "bookings" ? "bg-white text-rose-500 shadow-xl" : "text-slate-400 hover:text-slate-600"
              }`}
            >
              <ClipboardList size={18} />
-             All Bookings
+             Bookings
            </button>
            <button 
              onClick={() => { setActiveTab("listings"); setSearchTerm(""); }}
-             className={`flex-1 lg:w-48 flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black text-sm transition-all duration-300 ${
+             className={`flex-1 lg:w-40 flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black text-sm transition-all duration-300 ${
                activeTab === "listings" ? "bg-white text-rose-500 shadow-xl" : "text-slate-400 hover:text-slate-600"
              }`}
            >
              <Building2 size={18} />
-             All Listings
+             Listings
+           </button>
+           <button 
+             onClick={() => { setActiveTab("reviews"); setSearchTerm(""); }}
+             className={`flex-1 lg:w-40 flex items-center justify-center gap-3 py-3 rounded-[1.25rem] font-black text-sm transition-all duration-300 ${
+               activeTab === "reviews" ? "bg-white text-rose-500 shadow-xl" : "text-slate-400 hover:text-slate-600"
+             }`}
+           >
+             <MessageSquare size={18} />
+             Reviews
            </button>
         </div>
       </div>
@@ -98,7 +118,7 @@ function AdminDataManagement() {
            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
            <input 
              type="text" 
-             placeholder={activeTab === "bookings" ? "Search by booking ID, property or user..." : "Search by title, location or host..."}
+             placeholder={`Search in ${activeTab}...`}
              className="w-full bg-white border border-slate-200 rounded-[1.5rem] py-4 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all shadow-sm"
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
@@ -109,7 +129,9 @@ function AdminDataManagement() {
            <div className="bg-white px-6 py-4 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
               <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
-                {activeTab === "bookings" ? `${bookings.length} Total Bookings` : `${properties.length} Total Listings`}
+                {activeTab === "bookings" ? `${bookings.length} Bookings` : 
+                 activeTab === "listings" ? `${properties.length} Listings` : 
+                 `${reviews.length} Reviews`}
               </span>
            </div>
         </div>
@@ -118,7 +140,7 @@ function AdminDataManagement() {
       {/* Main Data Table */}
       <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          {activeTab === "bookings" ? (
+          {activeTab === "bookings" && (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50">
@@ -139,13 +161,13 @@ function AdminDataManagement() {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-sm">
-                          <img src={booking.property_detail.image} alt="" className="w-full h-full object-cover" />
+                          <img src={booking.property_detail?.image} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div>
-                          <p className="font-black text-slate-900 text-sm truncate max-w-[180px]">{booking.property_detail.title}</p>
+                          <p className="font-black text-slate-900 text-sm truncate max-w-[180px]">{booking.property_detail?.title}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <Tag size={10} className="text-rose-500" />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{booking.property_detail.host_username}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{booking.property_detail?.host_username}</p>
                           </div>
                         </div>
                       </div>
@@ -153,9 +175,9 @@ function AdminDataManagement() {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px] uppercase">
-                            {booking.user.username[0]}
+                            {booking.user?.username?.[0] || "?"}
                          </div>
-                         <p className="text-sm font-bold text-slate-700">{booking.user.username}</p>
+                         <p className="text-sm font-bold text-slate-700">{booking.user?.username}</p>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -184,7 +206,9 @@ function AdminDataManagement() {
                 ))}
               </tbody>
             </table>
-          ) : (
+          )}
+
+          {activeTab === "listings" && (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50">
@@ -249,7 +273,56 @@ function AdminDataManagement() {
               </tbody>
             </table>
           )}
-          {((activeTab === "bookings" && filteredBookings.length === 0) || (activeTab === "listings" && filteredProperties.length === 0)) && (
+
+          {activeTab === "reviews" && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50">
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Guest</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Property ID</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rating</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Comment</th>
+                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredReviews.map((rev) => (
+                  <tr key={rev.id} className="hover:bg-slate-50/50 transition group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black uppercase text-sm">
+                            {rev.user?.username?.[0] || "?"}
+                         </div>
+                         <p className="font-black text-slate-900">{rev.user?.username || "Deleted User"}</p>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-xs font-black text-slate-400">#{rev.property}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100 w-fit">
+                          <Star size={12} fill="#f59e0b" className="text-amber-500" />
+                          <span className="text-xs font-black text-amber-700">{rev.rating}</span>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <p className="text-sm font-bold text-slate-600 max-w-md line-clamp-2">{rev.comment}</p>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="flex items-center gap-2 text-slate-400">
+                          <Clock size={14} />
+                          <span className="text-xs font-bold">{new Date(rev.created_at).toLocaleDateString()}</span>
+                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {((activeTab === "bookings" && filteredBookings.length === 0) || 
+            (activeTab === "listings" && filteredProperties.length === 0) ||
+            (activeTab === "reviews" && filteredReviews.length === 0)) && (
             <div className="py-32 text-center">
                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Search size={32} className="text-slate-200" />

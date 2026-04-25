@@ -133,8 +133,14 @@ function Navbar() {
               className="flex items-center gap-3 bg-white border border-slate-200 rounded-full pl-3 pr-1.5 py-1.5 transition-all hover:shadow-md cursor-pointer group"
             >
               <Menu size={16} className="text-slate-600 ml-1" />
-              <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center text-white ring-2 ring-white shadow-sm">
-                {user ? <span className="text-xs font-black uppercase">{user.username[0]}</span> : <User size={16} />}
+              <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center text-white ring-2 ring-white shadow-sm overflow-hidden">
+                {user?.avatar ? (
+                   <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : user ? (
+                   <span className="text-xs font-black uppercase">{user.username[0]}</span>
+                ) : (
+                   <User size={16} />
+                )}
               </div>
             </button>
 
