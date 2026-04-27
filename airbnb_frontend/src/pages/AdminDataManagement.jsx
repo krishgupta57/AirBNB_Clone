@@ -258,14 +258,18 @@ function AdminDataManagement() {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                       {prop.is_active ? (
-                         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest">
-                            <ShieldCheck size={12} /> Active
+                       {prop.status === 'active' ? (
+                          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-black uppercase tracking-widest">
+                             <ShieldCheck size={12} /> Active
+                          </span>
+                       ) : prop.status === 'maintenance' ? (
+                         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-widest">
+                            <Clock size={12} /> Maintenance
                          </span>
                        ) : (
-                         <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-black uppercase tracking-widest">
-                            <ShieldAlert size={12} /> Private
-                         </span>
+                          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 text-[10px] font-black uppercase tracking-widest">
+                             <ShieldAlert size={12} /> Inactive
+                          </span>
                        )}
                     </td>
                   </tr>

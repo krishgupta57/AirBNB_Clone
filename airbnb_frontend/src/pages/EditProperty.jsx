@@ -199,7 +199,16 @@ function EditProperty() {
             </div>
             <div>
               <label className="block text-sm font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Price per Night</label>
-              <input name="price_per_night" type="number" value={form.price_per_night} onChange={handleChange} className="w-full border-2 border-slate-50 bg-slate-50/50 rounded-2xl px-5 py-4 font-medium outline-none focus:border-rose-500 focus:bg-white transition" required />
+              <input 
+                name="price_per_night" 
+                type="number" 
+                min="0"
+                step="0.01"
+                value={form.price_per_night} 
+                onChange={handleChange} 
+                className="w-full border-2 border-slate-50 bg-slate-50/50 rounded-2xl px-5 py-4 font-medium outline-none focus:border-rose-500 focus:bg-white transition" 
+                required 
+              />
             </div>
           </div>
 

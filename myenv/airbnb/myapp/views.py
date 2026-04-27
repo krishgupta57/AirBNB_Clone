@@ -449,10 +449,54 @@ class AdminStatsView(APIView):
         total_guests = User.objects.filter(role='guest').count()
         
         # 3. Listings
+        from django.db.models import Count
         total_listings = Property.objects.count()
-        active_listings = Property.objects.filter(is_active=True).count()
+        status_counts = Property.objects.values('status').annotate(count=Count('status'))
+        status_dict = {item['status']: item['count'] for item in status_counts}
         
-        # 4. Recent Activity
+        # Ensure all statuses exist in dict
+        for s_code, _ in Property.STATUS_CHOICES:
+            if s_code not in status_dict:
+                status_dict[s_code] = 0
+        
+        # 4. Financial History (Last 6 Months)
+        from django.db.models.functions import TruncMonth
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        six_months_ago = timezone.now() - timedelta(days=180)
+        
+        # Monthly Booking Fees (10% of total_price)
+        monthly_bookings = Booking.objects.filter(
+            status='confirmed',
+            created_at__gte=six_months_ago
+        ).annotate(month=TruncMonth('created_at')).values('month').annotate(total=Sum('total_price')).order_by('month')
+        
+        # Monthly Subscriptions
+        monthly_subs = SubscriptionTransaction.objects.filter(
+            transaction_type__in=['purchase', 'adjustment'],
+            created_at__gte=six_months_ago
+        ).annotate(month=TruncMonth('created_at')).values('month').annotate(total=Sum('amount')).order_by('month')
+
+        # Merge results into a unified history
+        history_map = {}
+        for b in monthly_bookings:
+            m_str = b['month'].strftime('%b %Y')
+            history_map[m_str] = {
+                "month": m_str,
+                "bookings": float(Decimal(b['total'] or 0) * Decimal('0.10')),
+                "subscriptions": 0
+            }
+        
+        for s in monthly_subs:
+            m_str = s['month'].strftime('%b %Y')
+            if m_str not in history_map:
+                history_map[m_str] = {"month": m_str, "bookings": 0, "subscriptions": 0}
+            history_map[m_str]["subscriptions"] = float(s['total'] or 0)
+            
+        revenue_history = sorted(history_map.values(), key=lambda x: timezone.datetime.strptime(x['month'], '%b %Y'))
+
+        # 5. Recent Activity
         recent_bookings = BookingSerializer(
             Booking.objects.order_by('-created_at')[:5], 
             many=True, 
@@ -469,7 +513,8 @@ class AdminStatsView(APIView):
                 "total_booking_revenue": str(total_booking_revenue),
                 "platform_fee_income": str(platform_fee_income),
                 "subscription_revenue": str(subscription_revenue),
-                "total_platform_revenue": str(Decimal(platform_fee_income) + Decimal(subscription_revenue))
+                "total_platform_revenue": str(Decimal(platform_fee_income) + Decimal(subscription_revenue)),
+                "history": revenue_history
             },
             "users": {
                 "total_hosts": total_hosts,
@@ -478,8 +523,9 @@ class AdminStatsView(APIView):
             },
             "listings": {
                 "total": total_listings,
-                "active": active_listings,
-                "inactive": total_listings - active_listings
+                "active": status_dict.get('active', 0),
+                "inactive": status_dict.get('inactive', 0),
+                "maintenance": status_dict.get('maintenance', 0)
             },
             "recent_activity": {
                 "bookings": recent_bookings,
