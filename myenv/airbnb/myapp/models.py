@@ -67,6 +67,11 @@ class Property(models.Model):
         ('house', 'House'),
         ('room', 'Room'),
     )
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('maintenance', 'Maintenance'),
+    )
 
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='properties')
     title = models.CharField(max_length=200)
@@ -77,6 +82,7 @@ class Property(models.Model):
     bathrooms = models.PositiveIntegerField(default=1)
     guests = models.PositiveIntegerField(default=1)
     property_type = models.CharField(max_length=20, choices=PROPERTY_TYPES, default='apartment')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     image = models.URLField(blank=True, null=True)
     image_file = models.ImageField(upload_to='property_images/', blank=True, null=True)
     amenities = models.JSONField(default=list, blank=True)

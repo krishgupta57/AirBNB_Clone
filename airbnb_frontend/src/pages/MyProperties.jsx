@@ -61,7 +61,16 @@ function MyProperties() {
                 className="w-full h-60 object-cover"
               />
               <div className="p-5">
-                <h3 className="text-2xl font-bold">{property.title}</h3>
+                <div className="flex justify-between items-start mb-2">
+                   <h3 className="text-2xl font-bold">{property.title}</h3>
+                   <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                     property.status === 'active' ? 'bg-emerald-100 text-emerald-600' :
+                     property.status === 'maintenance' ? 'bg-amber-100 text-amber-600' :
+                     'bg-rose-100 text-rose-600'
+                   }`}>
+                     {property.status}
+                   </span>
+                </div>
                 <p className="text-slate-500 mt-1">{property.location}</p>
                 <p className="text-rose-500 font-semibold mt-3">₹{property.price_per_night}/night</p>
 

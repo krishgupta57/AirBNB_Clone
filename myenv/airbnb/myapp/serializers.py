@@ -67,6 +67,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'bathrooms',
             'guests',
             'property_type',
+            'status',
             'image',
             'image_file',
             'amenities',

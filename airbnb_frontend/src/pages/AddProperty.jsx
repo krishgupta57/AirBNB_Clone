@@ -33,6 +33,7 @@ function AddProperty() {
     bathrooms: 1,
     guests: 1,
     property_type: "apartment",
+    status: "active",
     image: "",
     amenities: [],
   });
@@ -174,6 +175,34 @@ function AddProperty() {
                   }`}
                 >
                   <p className="text-xs font-black uppercase tracking-widest">{type}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:col-span-2 space-y-4 mb-4">
+            <label className="block text-sm font-black text-slate-700 uppercase tracking-widest ml-1">Property Availability Status</label>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { id: "active", label: "Active", icon: <Check size={14} /> },
+                { id: "maintenance", label: "Maintenance", icon: <Info size={14} /> },
+                { id: "inactive", label: "Inactive", icon: <Lock size={14} /> }
+              ].map((s) => (
+                <div 
+                  key={s.id}
+                  onClick={() => setForm({ ...form, status: s.id })}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer text-center transition-all flex flex-col items-center justify-center gap-2 ${
+                    form.status === s.id 
+                      ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md scale-105' 
+                      : 'border-slate-50 bg-slate-50/50 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    form.status === s.id ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {s.icon}
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest">{s.label}</p>
                 </div>
               ))}
             </div>
