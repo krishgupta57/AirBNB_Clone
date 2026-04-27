@@ -14,7 +14,10 @@ import {
   Building2,
   ChevronRight,
   MessageSquare,
-  Clock
+  Clock,
+  CheckCircle,
+  Users,
+  LayoutGrid
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -72,6 +75,23 @@ function AdminDataManagement() {
     r.id.toString().includes(searchTerm)
   );
 
+  // Stats Calculations
+  const now = new Date();
+  
+  const bookingStats = {
+    total: bookings.length,
+    completed: bookings.filter(b => b.status === 'confirmed' && new Date(b.check_out) < now).length,
+    staying: bookings.filter(b => b.status === 'confirmed' && new Date(b.check_in) <= now && new Date(b.check_out) >= now).length,
+    canceled: bookings.filter(b => b.status === 'cancelled').length
+  };
+
+  const propertyStats = {
+    total: properties.length,
+    active: properties.filter(p => p.status === 'active').length,
+    maintenance: properties.filter(p => p.status === 'maintenance').length,
+    inactive: properties.filter(p => p.status === 'inactive').length
+  };
+
   return (
     <div className="container-custom py-12">
       {/* Header & Global Switcher */}
@@ -111,6 +131,25 @@ function AdminDataManagement() {
            </button>
         </div>
       </div>
+
+      {/* KPI Cards (Conditional based on Tab) */}
+      {activeTab === "bookings" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <AuditStatCard title="Total Bookings" value={bookingStats.total} icon={<ClipboardList size={20} />} color="bg-slate-50 text-slate-600" />
+          <AuditStatCard title="Completed" value={bookingStats.completed} icon={<CheckCircle size={20} />} color="bg-emerald-50 text-emerald-600" />
+          <AuditStatCard title="Currently Staying" value={bookingStats.staying} icon={<Users size={20} />} color="bg-blue-50 text-blue-600" />
+          <AuditStatCard title="Canceled" value={bookingStats.canceled} icon={<ShieldAlert size={20} />} color="bg-rose-50 text-rose-600" />
+        </div>
+      )}
+
+      {activeTab === "listings" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <AuditStatCard title="Total Inventory" value={propertyStats.total} icon={<LayoutGrid size={20} />} color="bg-slate-50 text-slate-600" />
+          <AuditStatCard title="Live Listings" value={propertyStats.active} icon={<ShieldCheck size={20} />} color="bg-emerald-50 text-emerald-600" />
+          <AuditStatCard title="In Maintenance" value={propertyStats.maintenance} icon={<Clock size={20} />} color="bg-amber-50 text-amber-600" />
+          <AuditStatCard title="Inactive/Hidden" value={propertyStats.inactive} icon={<ShieldAlert size={20} />} color="bg-slate-100 text-slate-400" />
+        </div>
+      )}
 
       {/* Dynamic Filter Section */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -335,6 +374,20 @@ function AdminDataManagement() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AuditStatCard({ title, value, icon, color }) {
+  return (
+    <div className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-100 border border-slate-50 flex items-center gap-5 group hover:scale-[1.02] transition-all cursor-default">
+      <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shadow-sm shrink-0`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{title}</p>
+        <h4 className="text-xl font-black text-slate-900">{value}</h4>
       </div>
     </div>
   );
