@@ -1,3 +1,4 @@
+from django.db import models
 from django.utils import timezone
 from decimal import Decimal
 from django.contrib.auth import get_user_model
@@ -11,9 +12,10 @@ from rest_framework.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.conf import settings
 from django.db.models import Sum, Count
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 import random
 
-from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction
+from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction, Message
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -22,6 +24,7 @@ from .serializers import (
     ReviewSerializer,
     WishlistSerializer,
     SubscriptionTransactionSerializer,
+    MessageSerializer,
 )
 from decimal import Decimal
 
@@ -350,19 +353,49 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
     serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("as_host", OpenApiTypes.BOOL, description="Filter bookings for properties owned by the current host."),
+            OpenApiParameter("admin_view", OpenApiTypes.BOOL, description="Admin only: see all bookings on the platform."),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = Booking.objects.select_related(
             'user', 'property', 'property__host'
         ).prefetch_related(
-            'property__reviews', 'property__reviews__user'
+            'property__reviews', 'property__reviews__user', 'messages'
         ).order_by('-created_at')
 
         is_admin_view = self.request.query_params.get('admin_view') == 'true' and self.request.user.is_staff
+        is_host_view = self.request.query_params.get('as_host') == 'true'
         
-        if not is_admin_view:
+        if is_admin_view:
+            pass # See all
+        elif is_host_view:
+            queryset = queryset.filter(property__host=self.request.user)
+        else:
             queryset = queryset.filter(user=self.request.user)
             
         return queryset
+
+    @extend_schema(
+        responses={200: OpenApiTypes.OBJECT},
+        description="Get total unread message count for the current user (as guest or host)."
+    )
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        # Total unread messages across all bookings where the user is either guest or host
+        count = Message.objects.filter(
+            is_read=False
+        ).filter(
+            models.Q(booking__user=request.user) | models.Q(booking__property__host=request.user)
+        ).exclude(
+            sender=request.user
+        ).count()
+        return Response({"unread_count": count})
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -376,6 +409,46 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
         booking.status = 'cancelled'
         booking.save()
         return Response({"message": "Booking cancelled successfully"})
+
+    @extend_schema(
+        methods=['GET'],
+        responses={200: MessageSerializer(many=True)},
+        description="Retrieve chat history for this booking."
+    )
+    @extend_schema(
+        methods=['POST'],
+        request=OpenApiTypes.OBJECT,
+        responses={201: MessageSerializer},
+        description="Send a new message for this booking."
+    )
+    @action(detail=True, methods=['get', 'post'])
+    def messages(self, request, pk=None):
+        booking = self.get_object()
+        
+        # Security: only the guest or the property host can access these messages
+        if request.user != booking.user and request.user != booking.property.host and not request.user.is_staff:
+            return Response({"error": "You do not have permission to access this chat."}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            # Mark messages as read when fetched (if the user is not the sender)
+            booking.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+            
+            messages = booking.messages.all().order_by('created_at')
+            serializer = MessageSerializer(messages, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        elif request.method == 'POST':
+            content = request.data.get('content')
+            if not content:
+                return Response({"error": "Content is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            message = Message.objects.create(
+                booking=booking,
+                sender=request.user,
+                content=content
+            )
+            serializer = MessageSerializer(message, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ReviewViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

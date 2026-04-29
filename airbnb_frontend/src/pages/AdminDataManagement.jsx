@@ -20,6 +20,7 @@ import {
   LayoutGrid
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ChatModal from "../components/ChatModal";
 
 function AdminDataManagement() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -28,6 +29,8 @@ function AdminDataManagement() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -205,16 +208,29 @@ function AdminDataManagement() {
                         <div>
                           <p className="font-black text-slate-900 text-sm truncate max-w-[180px]">{booking.property_detail?.title}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <Tag size={10} className="text-rose-500" />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{booking.property_detail?.host_username}</p>
+                            <User size={10} className="text-rose-500" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{booking.property_detail?.host?.username || "Host"}</span>
                           </div>
+                          {booking.status !== 'cancelled' && (
+                            <button 
+                              onClick={() => setActiveChatBooking(booking)}
+                              className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-500 transition-colors"
+                            >
+                              <MessageSquare size={12} />
+                              Message Guest
+                            </button>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px] uppercase">
-                            {booking.user?.username?.[0] || "?"}
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center text-slate-500 font-black text-[10px] uppercase shadow-sm">
+                            {booking.user?.avatar ? (
+                                <img src={booking.user.avatar} className="w-full h-full object-cover" />
+                            ) : (
+                                booking.user?.username?.[0] || "?"
+                            )}
                          </div>
                          <p className="text-sm font-bold text-slate-700">{booking.user?.username}</p>
                       </div>
@@ -375,6 +391,14 @@ function AdminDataManagement() {
           )}
         </div>
       </div>
+
+      {activeChatBooking && (
+        <ChatModal 
+          booking={activeChatBooking} 
+          currentUser={currentUser} 
+          onClose={() => setActiveChatBooking(null)} 
+        />
+      )}
     </div>
   );
 }

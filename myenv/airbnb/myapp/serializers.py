@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction
+from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction, Message
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -121,6 +121,7 @@ class BookingSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     property_detail = PropertySerializer(source='property', read_only=True)
     trip_status = serializers.SerializerMethodField()
+    unread_messages_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -134,6 +135,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'total_price',
             'status',
             'trip_status',
+            'unread_messages_count',
             'created_at',
         ]
         read_only_fields = ['user', 'total_price', 'status', 'trip_status']
@@ -148,6 +150,12 @@ class BookingSerializer(serializers.ModelSerializer):
         if obj.check_in <= today <= obj.check_out:
             return 'Staying'
         return 'Upcoming'
+
+    def get_unread_messages_count(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 0
+        return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
 
     def validate(self, attrs):
         # Basic check-in/out validation if present
@@ -171,3 +179,11 @@ class SubscriptionTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionTransaction
         fields = '__all__'
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = Message
+        fields = ['id', 'booking', 'sender', 'content', 'is_read', 'created_at']
+        read_only_fields = ['booking', 'sender']

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList } from "lucide-react";
+import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList, Bell } from "lucide-react";
+import API from "../api";
 import { useState, useEffect, useRef } from "react";
 import { getUser, logoutUser } from "../utils/auth";
 import toast from "react-hot-toast";
@@ -12,8 +13,26 @@ function Navbar() {
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await API.get("bookings/unread_count/");
+      setUnreadCount(res.data.unread_count);
+    } catch (error) {
+      console.error("Failed to fetch unread count", error);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,7 +73,8 @@ function Navbar() {
   };
 
   return (
-    <header className="professional-header shadow-sm bg-white">
+    <>
+      <header className="professional-header shadow-sm bg-white">
       <div className="container-custom w-full flex items-center justify-between">
         
         {/* 1. Logo Section */}
@@ -127,6 +147,23 @@ function Navbar() {
             </Link>
           )}
 
+          {/* Separate Notification Icon */}
+          {user && (
+            <button 
+              onClick={() => navigate(user.role === 'host' ? '/host/manage?tab=bookings' : '/my-bookings')}
+              className="relative p-2.5 rounded-full hover:bg-slate-50 transition-colors group"
+            >
+              <Bell size={20} className="text-slate-600 group-hover:text-rose-500 transition-colors" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-rose-500 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-white shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          )}
+
+
+
           <div className="relative" ref={menuRef}>
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -177,6 +214,13 @@ function Navbar() {
                       {user.role === 'host' ? 'Host Dashboard' : 'My Trips'}
                     </Link>
 
+                    {user.role === 'host' && (
+                      <Link to="/host/manage" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition" onClick={() => setIsMenuOpen(false)}>
+                        <ClipboardList size={16} className="text-slate-400" />
+                        Manage Business
+                      </Link>
+                    )}
+
                     {user.is_staff && (
                       <>
                         <Link to="/admin/dashboard" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-rose-600 bg-rose-50/50 hover:bg-rose-50 transition border-y border-rose-100/50" onClick={() => setIsMenuOpen(false)}>
@@ -222,6 +266,7 @@ function Navbar() {
 
       </div>
 
+
       {/* Mobile Search - Simplified View */}
       <div className="md:hidden fixed top-20 left-0 w-full px-4 py-3 bg-white border-b border-slate-100 airbnb-shadow">
           <form onSubmit={handleSearch} className="relative">
@@ -239,6 +284,7 @@ function Navbar() {
       </div>
 
     </header>
+    </>
   );
 }
 

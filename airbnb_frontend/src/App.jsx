@@ -16,6 +16,7 @@ import MyBookings from "./pages/MyBookings";
 import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
 import HostDashboard from "./pages/HostDashboard";
+import HostDataManagement from "./pages/HostDataManagement";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerifyOTP from "./pages/VerifyOTP";
 import Search from "./pages/Search";
@@ -87,6 +88,14 @@ function App() {
             element={
               <HostRoute>
                 <HostDashboard />
+              </HostRoute>
+            }
+          />
+          <Route
+            path="/host/manage"
+            element={
+              <HostRoute>
+                <HostDataManagement />
               </HostRoute>
             }
           />

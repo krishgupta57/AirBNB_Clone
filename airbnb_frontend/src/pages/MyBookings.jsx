@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import API from "../api";
 import toast from "react-hot-toast";
+import ChatModal from "../components/ChatModal";
+import { MessageSquare } from "lucide-react";
 
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem('user'));
 
   const loadBookings = async () => {
     try {
@@ -31,6 +35,8 @@ function MyBookings() {
 
   useEffect(() => {
     loadBookings();
+    const interval = setInterval(loadBookings, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -46,7 +52,11 @@ function MyBookings() {
       ) : (
         <div className="space-y-6">
           {bookings.map((booking) => (
-            <div key={booking.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <div key={booking.id} className={`bg-white rounded-3xl border transition-all duration-500 p-6 shadow-sm ${
+                booking.unread_messages_count > 0 
+                ? 'border-rose-500 shadow-xl shadow-rose-200/50 ring-2 ring-rose-500/20 bg-rose-50/10' 
+                : 'border-slate-100'
+              }`}>
               <div className="grid md:grid-cols-4 gap-6 items-center">
                 <img
                   src={booking.property_detail.image_file || booking.property_detail.image || "https://images.unsplash.com/photo-1518780664697-55e3ad937233"}
@@ -72,6 +82,20 @@ function MyBookings() {
                       {booking.trip_status}
                     </span>
 
+                    {booking.status !== 'cancelled' && booking.trip_status !== 'Completed' && (
+                      <button 
+                        onClick={() => setActiveChatBooking(booking)}
+                        className={`mt-2 flex items-center justify-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all w-full shadow-lg ${
+                          booking.unread_messages_count > 0
+                          ? 'bg-rose-600 text-white scale-105'
+                          : 'bg-slate-900 text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        <MessageSquare size={14} />
+                        {booking.unread_messages_count > 0 ? `Message Host (${booking.unread_messages_count} New)` : 'Message Host'}
+                      </button>
+                    )}
+
                     {booking.trip_status === 'Upcoming' && booking.status !== 'cancelled' && (
                       <button 
                         onClick={() => cancelBooking(booking.id)}
@@ -86,6 +110,14 @@ function MyBookings() {
             </div>
           ))}
         </div>
+      )}
+
+      {activeChatBooking && (
+        <ChatModal 
+          booking={activeChatBooking} 
+          currentUser={currentUser} 
+          onClose={() => setActiveChatBooking(null)} 
+        />
       )}
     </div>
   );

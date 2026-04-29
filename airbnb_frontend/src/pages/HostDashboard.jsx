@@ -3,7 +3,8 @@ import API from "../api";
 import DashboardStat from "../components/DashboardStat";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Zap, Crown, EyeOff, Plus, Wallet as WalletIcon, ArrowUpRight } from "lucide-react";
+import { Zap, Crown, EyeOff, Plus, Wallet as WalletIcon, ArrowUpRight, MessageSquare, Calendar as CalendarIcon, User } from "lucide-react";
+import ChatModal from "../components/ChatModal";
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -11,17 +12,22 @@ function HostDashboard() {
   const [properties, setProperties] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [user, setUser] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [activeChatBooking, setActiveChatBooking] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem('user'));
 
   const loadData = async () => {
     try {
-      const [propRes, analyticsRes, profileRes] = await Promise.all([
+      const [propRes, analyticsRes, profileRes, bookRes] = await Promise.all([
         API.get("properties/my/"),
         API.get("properties/analytics/"),
-        API.get("profile/")
+        API.get("profile/"),
+        API.get("bookings/?as_host=true")
       ]);
       setProperties(propRes.data);
       setAnalytics(analyticsRes.data);
       setUser(profileRes.data);
+      setBookings(bookRes.data);
     } catch (error) {
       console.log(error);
       toast.error("Failed to load dashboard data");
