@@ -13,6 +13,8 @@ from .views import (
     TransactionView,
     AdminStatsView,
     AdminUserListView,
+    SupportTicketViewSet,
+    InquiryViewSet,
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -20,6 +22,8 @@ router = DefaultRouter()
 router.register(r'properties', PropertyViewSet, basename='property')
 router.register(r'bookings', BookingViewSet, basename='booking')
 router.register(r'reviews', ReviewViewSet, basename='review')
+router.register(r'support-tickets', SupportTicketViewSet, basename='support-ticket')
+router.register(r'inquiries', InquiryViewSet, basename='inquiry')
 
 urlpatterns = [
     path('', include(router.urls)),

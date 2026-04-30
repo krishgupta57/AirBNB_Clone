@@ -28,8 +28,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminBookingManagement from "./pages/AdminBookingManagement";
 import AdminListingManagement from "./pages/AdminListingManagement";
+import AdminSupportManagement from "./pages/AdminSupportManagement";
 import AdminDataManagement from "./pages/AdminDataManagement";
 import AdminSecretSetup from "./pages/AdminSecretSetup";
+import HelpCenter from "./pages/HelpCenter";
 import NotFound from "./pages/NotFound";
 
 import { Toaster } from "react-hot-toast";
@@ -200,6 +202,14 @@ function App() {
           />
 
           <Route
+            path="/admin/support"
+            element={
+              <AdminRoute>
+                <AdminSupportManagement />
+              </AdminRoute>
+            }
+          />
+          <Route
             path="/admin/all-data"
             element={
               <AdminRoute>
@@ -208,6 +218,7 @@ function App() {
             }
           />
 
+          <Route path="/help" element={<HelpCenter />} />
           <Route path="/admin-genesis-setup-2026" element={<AdminSecretSetup />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -15,16 +15,20 @@ from django.db.models import Sum, Count
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 import random
 
-from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction, Message
+from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
     PropertySerializer,
     BookingSerializer,
+    MessageSerializer,
     ReviewSerializer,
     WishlistSerializer,
     SubscriptionTransactionSerializer,
-    MessageSerializer,
+    SupportTicketSerializer,
+    SupportMessageSerializer,
+    InquirySerializer,
+    InquiryMessageSerializer
 )
 from decimal import Decimal
 
@@ -349,7 +353,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 
         return Response(list(booked_dates))
 
-class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
 
@@ -369,6 +373,15 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
             'property__reviews', 'property__reviews__user', 'messages'
         ).order_by('-created_at')
 
+        # For detail views (actions like messages/cancel), we allow both guests and hosts to see the object.
+        # The action itself will handle permission checks.
+        if self.kwargs.get('pk'):
+            if self.request.user.is_staff:
+                return queryset
+            return queryset.filter(
+                models.Q(user=self.request.user) | models.Q(property__host=self.request.user)
+            )
+
         is_admin_view = self.request.query_params.get('admin_view') == 'true' and self.request.user.is_staff
         is_host_view = self.request.query_params.get('as_host') == 'true'
         
@@ -383,19 +396,47 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Ge
 
     @extend_schema(
         responses={200: OpenApiTypes.OBJECT},
-        description="Get total unread message count for the current user (as guest or host)."
+        description="Get total unread message count for the current user (bookings + support)."
     )
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
-        # Total unread messages across all bookings where the user is either guest or host
-        count = Message.objects.filter(
+        # 1. Booking messages
+        booking_unread = Message.objects.filter(
             is_read=False
         ).filter(
             models.Q(booking__user=request.user) | models.Q(booking__property__host=request.user)
         ).exclude(
             sender=request.user
         ).count()
-        return Response({"unread_count": count})
+
+        # 2. Support messages (Only for the ticket owner)
+        support_unread = SupportMessage.objects.filter(
+            is_read=False,
+            ticket__user=request.user,
+            is_internal=False
+        ).exclude(
+            sender=request.user
+        ).count()
+
+        # Special case for admins: they should see all unread messages on tickets they didn't send
+        if request.user.is_staff:
+            support_unread = SupportMessage.objects.filter(is_read=False).exclude(sender=request.user).count()
+
+        # 3. Inquiry messages
+        inquiry_unread = InquiryMessage.objects.filter(
+            is_read=False
+        ).filter(
+            models.Q(inquiry__user=request.user) | models.Q(inquiry__property__host=request.user)
+        ).exclude(
+            sender=request.user
+        ).count()
+
+        return Response({
+            "unread_count": booking_unread + support_unread + inquiry_unread,
+            "booking_unread": booking_unread,
+            "support_unread": support_unread,
+            "inquiry_unread": inquiry_unread
+        })
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -675,3 +716,167 @@ class AdminUserListView(APIView):
         user.is_superuser = True
         user.save()
         return Response({"message": f"User {user.username} promoted to Admin successfully"})
+
+class SupportTicketViewSet(viewsets.ModelViewSet):
+    serializer_class = SupportTicketSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Base queryset for all tickets
+        queryset = SupportTicket.objects.all().select_related('user', 'assigned_to').order_by('-updated_at')
+        
+        # Detail view security
+        if self.kwargs.get('pk'):
+            if self.request.user.is_staff:
+                return queryset
+            # Non-staff can ONLY see their own tickets
+            return queryset.filter(user_id=self.request.user.id)
+
+        # List view security
+        if self.request.user.is_staff:
+            return queryset
+        # Regular users only see their own tickets
+        return queryset.filter(user_id=self.request.user.id)
+
+    def perform_create(self, serializer):
+        ticket = serializer.save(user=self.request.user)
+        
+        # Professional Touch: Automated Initial Response
+        SupportMessage.objects.create(
+            ticket=ticket,
+            sender=User.objects.filter(is_staff=True).first(), # Use first staff member or a dedicated "System" user
+            content=f"Hello {self.request.user.username}, we've received your inquiry about '{ticket.subject}'. A support agent will be with you shortly. Thank you for your patience!"
+        )
+
+    @extend_schema(
+        methods=['GET'],
+        responses={200: SupportMessageSerializer(many=True)},
+        description="Retrieve chat history for this support ticket."
+    )
+    @extend_schema(
+        methods=['POST'],
+        request=OpenApiTypes.OBJECT,
+        responses={201: SupportMessageSerializer},
+        description="Send a new message for this support ticket."
+    )
+    @action(detail=True, methods=['get', 'post'])
+    def messages(self, request, pk=None):
+        ticket = self.get_object()
+        
+        # Security: Only the owner or staff can access this ticket's messages
+        if ticket.user_id != request.user.id and not request.user.is_staff:
+            return Response({"error": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            # 1. Fetch current messages
+            queryset = ticket.messages.all().order_by('created_at')
+            
+            # Security: Filter out internal notes for non-staff users
+            if not request.user.is_staff:
+                queryset = queryset.filter(is_internal=False)
+
+            # 2. Identify messages to delete (all messages currently being returned)
+            # Actually, I'll return them, but wait, the user wanted them deleted.
+            # I'll keep the deletion logic but ensure it only deletes what it's returning.
+            messages_to_return = list(queryset)
+            serializer = SupportMessageSerializer(messages_to_return, many=True, context={'request': request})
+            
+            # Delete only the messages we just retrieved
+            queryset.delete() 
+            
+            return Response(serializer.data)
+
+        elif request.method == 'POST':
+            # Block messages on resolved/closed tickets (unless staff wants to override)
+            if ticket.status in ['resolved', 'closed'] and not request.user.is_staff:
+                return Response(
+                    {"error": f"This ticket is {ticket.status}. You cannot send messages to a finalized ticket."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            content = request.data.get('content')
+            is_internal = request.data.get('is_internal', False)
+            attachment = request.FILES.get('attachment')
+            
+            if not content and not attachment:
+                return Response({"error": "Content or attachment is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Only staff can send internal notes
+            if is_internal and not request.user.is_staff:
+                is_internal = False
+
+            message = SupportMessage.objects.create(
+                ticket=ticket,
+                sender=request.user,
+                content=content or "",
+                is_internal=is_internal,
+                attachment=attachment
+            )
+            # Update ticket timestamp
+            ticket.save() 
+            serializer = SupportMessageSerializer(message, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+        
+        ticket = self.get_object()
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        staff_user = get_object_or_404(User, id=user_id, is_staff=True)
+        ticket.assigned_to = staff_user
+        ticket.save()
+        return Response({"message": f"Ticket assigned to {staff_user.username}"})
+
+class InquiryViewSet(viewsets.ModelViewSet):
+    serializer_class = InquirySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Inquiry.objects.select_related('user', 'property', 'property__host').order_by('-created_at')
+        
+        if self.kwargs.get('pk'):
+            if self.request.user.is_staff:
+                return queryset
+            return queryset.filter(
+                models.Q(user=self.request.user) | models.Q(property__host=self.request.user)
+            )
+
+        if self.request.user.is_staff:
+            return queryset
+        return queryset.filter(
+            models.Q(user=self.request.user) | models.Q(property__host=self.request.user)
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['get', 'post'])
+    def messages(self, request, pk=None):
+        inquiry = self.get_object()
+        
+        if request.user != inquiry.user and request.user != inquiry.property.host:
+            return Response({"error": "Access denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'GET':
+            inquiry.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
+            messages = inquiry.messages.all().order_by('created_at')
+            serializer = InquiryMessageSerializer(messages, many=True, context={'request': request})
+            return Response(serializer.data)
+
+        elif request.method == 'POST':
+            content = request.data.get('content')
+            if not content:
+                return Response({"error": "Content is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            message = InquiryMessage.objects.create(
+                inquiry=inquiry,
+                sender=request.user,
+                content=content
+            )
+            serializer = InquiryMessageSerializer(message, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)

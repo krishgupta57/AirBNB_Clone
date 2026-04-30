@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction, Message
+from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -180,6 +180,33 @@ class SubscriptionTransactionSerializer(serializers.ModelSerializer):
         model = SubscriptionTransaction
         fields = '__all__'
 
+class SupportMessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+
+    class Meta:
+        model = SupportMessage
+        fields = ['id', 'ticket', 'sender', 'content', 'attachment', 'is_internal', 'is_read', 'created_at']
+
+class SupportTicketSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    unread_messages_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupportTicket
+        fields = ['id', 'user', 'assigned_to', 'subject', 'category', 'status', 'priority', 'created_at', 'updated_at', 'unread_messages_count']
+
+    def get_unread_messages_count(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 0
+        
+        # Admins see all unread
+        if request.user.is_staff:
+            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+        
+        # Guests see unread messages that are NOT internal
+        return obj.messages.filter(is_read=False, is_internal=False).exclude(sender=request.user).count()
+
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
     
@@ -187,3 +214,25 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = ['id', 'booking', 'sender', 'content', 'is_read', 'created_at']
         read_only_fields = ['booking', 'sender']
+
+class InquiryMessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+
+    class Meta:
+        model = InquiryMessage
+        fields = ['id', 'inquiry', 'sender', 'content', 'is_read', 'created_at']
+
+class InquirySerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    property_detail = PropertySerializer(source='property', read_only=True)
+    unread_messages_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Inquiry
+        fields = ['id', 'user', 'property', 'property_detail', 'created_at', 'unread_messages_count']
+
+    def get_unread_messages_count(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 0
+        return obj.messages.filter(is_read=False).exclude(sender=request.user).count()

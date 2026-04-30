@@ -86,8 +86,8 @@ class Property(models.Model):
     image = models.URLField(blank=True, null=True)
     image_file = models.ImageField(upload_to='property_images/', blank=True, null=True)
     amenities = models.JSONField(default=list, blank=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def average_rating(self):
         reviews = self.reviews.all()
@@ -111,8 +111,8 @@ class Booking(models.Model):
     check_in = models.DateField()
     check_out = models.DateField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='confirmed')
-    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='confirmed', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def clean(self):
         if self.check_in >= self.check_out:
@@ -184,8 +184,63 @@ class Message(models.Model):
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     content = models.TextField()
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return f"Message from {self.sender.username} on Booking {self.booking.id}"
+
+class SupportTicket(models.Model):
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    )
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
+    subject = models.CharField(max_length=255)
+    category = models.CharField(max_length=100, default='General')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Ticket {self.id}: {self.subject} ({self.user.username})"
+
+class SupportMessage(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    attachment = models.FileField(upload_to='support_attachments/', null=True, blank=True)
+    is_internal = models.BooleanField(default=False, db_index=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"Support Message from {self.sender.username} on Ticket {self.ticket.id}"
+
+class Inquiry(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inquiries')
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='inquiries')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Inquiry by {self.user.username} for {self.property.title}"
+
+class InquiryMessage(models.Model):
+    inquiry = models.ForeignKey(Inquiry, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def __str__(self):
+        return f"Inquiry Message from {self.sender.username}"

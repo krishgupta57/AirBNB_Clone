@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList, Bell } from "lucide-react";
+import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList, Bell, ShieldCheck, HelpCircle } from "lucide-react";
 import API from "../api";
 import { useState, useEffect, useRef } from "react";
 import { getUser, logoutUser } from "../utils/auth";
@@ -20,10 +20,27 @@ function Navbar() {
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 5000);
-      return () => clearInterval(interval);
+      
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          fetchUnreadCount();
+        }
+      };
+
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchUnreadCount();
+        }
+      }, 10000); // Increased interval to 10s for better performance
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
-  }, []);
+  }, [user]);
 
   const fetchUnreadCount = async () => {
     try {
@@ -231,6 +248,10 @@ function Navbar() {
                           <ClipboardList size={16} className="text-slate-400" />
                           Platform Audit
                         </Link>
+                        <Link to="/admin/support" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition border-b border-slate-100" onClick={() => setIsMenuOpen(false)}>
+                          <ShieldCheck size={16} className="text-slate-400" />
+                          Support Tickets
+                        </Link>
                         <Link to="/admin/users" className="flex items-center gap-3 px-6 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50 transition border-b border-slate-100" onClick={() => setIsMenuOpen(false)}>
                           <Users size={16} className="text-slate-400" />
                           Manage Users
@@ -249,6 +270,13 @@ function Navbar() {
                       <UserCircle size={16} className="text-slate-400" />
                       Profile Settings
                     </Link>
+
+                    <Link to="/help" className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition" onClick={() => setIsMenuOpen(false)}>
+                      <HelpCircle size={16} className="text-slate-400" />
+                      Help Center
+                    </Link>
+
+                    <div className="h-px bg-slate-100 my-2 mx-6"></div>
 
                     <button 
                       onClick={logout}

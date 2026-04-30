@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import { getUser } from "../utils/auth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import InquiryChatModal from "../components/InquiryChatModal";
+import { MessageCircle } from "lucide-react";
 function PropertyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ function PropertyDetail() {
     comment: "",
   });
   const [bookedDates, setBookedDates] = useState([]);
+  const [activeInquiry, setActiveInquiry] = useState(null);
 
   const loadProperty = async () => {
     try {
@@ -230,10 +233,41 @@ function PropertyDetail() {
               <button className="w-full py-3.5 rounded-2xl bg-rose-500 hover:bg-slate-900 text-white font-semibold transition">
                 Reserve Now
               </button>
+
+              <button 
+                type="button"
+                onClick={async () => {
+                  if (!currentUser) return toast.error("Please login to contact host");
+                  try {
+                    // Try to find existing inquiry or create new one
+                    const res = await API.get(`inquiries/?property=${id}`);
+                    if (res.data.length > 0) {
+                      setActiveInquiry(res.data[0]);
+                    } else {
+                      const newRes = await API.post("inquiries/", { property: id });
+                      setActiveInquiry(newRes.data);
+                    }
+                  } catch (err) {
+                    toast.error("Failed to contact host");
+                  }
+                }}
+                className="w-full mt-3 py-3.5 rounded-2xl bg-white border-2 border-slate-900 text-slate-900 font-black hover:bg-slate-900 hover:text-white transition flex items-center justify-center gap-2"
+              >
+                <MessageCircle size={18} />
+                Contact Host
+              </button>
             </form>
           </div>
         </div>
       </div>
+      
+      {activeInquiry && (
+        <InquiryChatModal 
+          inquiry={activeInquiry}
+          currentUser={currentUser}
+          onClose={() => setActiveInquiry(null)}
+        />
+      )}
     </div>
   );
 }
