@@ -178,7 +178,7 @@ class WishlistSerializer(serializers.ModelSerializer):
 class WalletTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = WalletTransaction
-        fields = ['id', 'amount', 'transaction_type', 'description', 'created_at']
+        fields = ['id', 'amount', 'transaction_type', 'status', 'description', 'created_at']
 
 class SubscriptionTransactionSerializer(serializers.ModelSerializer):
     class Meta:

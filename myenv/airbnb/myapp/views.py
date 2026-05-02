@@ -121,16 +121,35 @@ class SubscriptionView(APIView):
                 description=f"Paid ₹{balance_used} from wallet for {plan} plan."
             )
 
+        action_type = request.data.get('action', 'purchase')
+        
+        # Ensure amount_paid is handled as Decimal
+        try:
+            amount_paid = Decimal(str(request.data.get('amount', 0)))
+        except:
+            amount_paid = Decimal(0)
+
         if amount_paid < 0:
-            # Downgrade credit to wallet
-            credit_amt = abs(amount_paid)
-            user.wallet_balance += credit_amt
-            WalletTransaction.objects.create(
-                user=user,
-                amount=credit_amt,
-                transaction_type='adjustment',
-                description=f"Subscription credit: ₹{credit_amt} after switching to {plan}."
-            )
+            adjustment_amt = abs(amount_paid)
+            if action_type == 'credit':
+                # Add to wallet
+                user.wallet_balance += adjustment_amt
+                WalletTransaction.objects.create(
+                    user=user,
+                    amount=adjustment_amt,
+                    transaction_type='adjustment',
+                    status='completed',
+                    description=f"Prorated credit for {old_tier} -> {plan} transition."
+                )
+            elif action_type == 'refund':
+                # Direct refund (simulated)
+                WalletTransaction.objects.create(
+                    user=user,
+                    amount=adjustment_amt,
+                    transaction_type='refund',
+                    status='completed',
+                    description=f"Prorated refund for {old_tier} -> {plan} transition."
+                )
 
         user.subscription_tier = plan
         user.last_billed_at = timezone.now()
@@ -206,6 +225,57 @@ class TransactionView(APIView):
         return Response({
             "wallet_transactions": WalletTransactionSerializer(wallet_txs, many=True).data,
             "subscription_transactions": SubscriptionTransactionSerializer(sub_txs, many=True).data
+        })
+
+class WalletTopupView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount = Decimal(request.data.get('amount', 0))
+        if amount <= 0:
+            return Response({"error": "Invalid amount"}, status=400)
+        
+        user = request.user
+        user.wallet_balance += amount
+        user.save()
+
+        WalletTransaction.objects.create(
+            user=user,
+            amount=amount,
+            transaction_type='topup',
+            status='completed',
+            description=f"Wallet top-up via card ending in ****"
+        )
+
+        return Response({
+            "message": "Funds added successfully!",
+            "balance": str(user.wallet_balance)
+        })
+
+class WalletWithdrawView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount = Decimal(request.data.get('amount', 0))
+        user = request.user
+        
+        if amount <= 0 or amount > user.wallet_balance:
+            return Response({"error": "Invalid amount or insufficient balance"}, status=400)
+        
+        user.wallet_balance -= amount
+        user.save()
+
+        WalletTransaction.objects.create(
+            user=user,
+            amount=amount,
+            transaction_type='withdrawal',
+            status='pending',
+            description=f"Withdrawal request to bank account"
+        )
+
+        return Response({
+            "message": "Withdrawal request submitted! It will be processed in 2-3 business days.",
+            "balance": str(user.wallet_balance)
         })
 
 

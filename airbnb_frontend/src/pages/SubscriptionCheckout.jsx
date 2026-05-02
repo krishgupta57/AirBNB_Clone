@@ -37,16 +37,19 @@ function SubscriptionCheckout() {
   const walletBalance = parseFloat(quote.wallet_balance);
   
   // Logic for final amount to pay
-  let netToPay = isDowngrade ? 0 : adjustment;
+  const basePrice = isDowngrade ? 0 : adjustment;
+  const gstOnBase = basePrice * 0.18;
+  const totalBeforeWallet = basePrice + gstOnBase;
+  
+  let netToPay = totalBeforeWallet;
   let balanceUsed = 0;
 
   if (!isDowngrade && walletBalance > 0) {
-    balanceUsed = Math.min(walletBalance, netToPay);
-    netToPay -= balanceUsed;
+    balanceUsed = Math.min(walletBalance, totalBeforeWallet);
+    netToPay = totalBeforeWallet - balanceUsed;
   }
 
-  const gst = netToPay * 0.18;
-  const total = netToPay + gst;
+  const finalTotal = netToPay;
 
   const handlePayment = async () => {
     setProcessing(true);
@@ -194,26 +197,31 @@ function SubscriptionCheckout() {
                   <span className="text-slate-900 tracking-tight">₹{quote.new_cost_remaining}</span>
                 </div>
                 <div className="flex justify-between text-slate-400 font-bold text-xs uppercase tracking-widest">
-                  <span>Usage Credit</span>
-                  <span className="text-emerald-600 tracking-tight">- ₹{quote.current_credit}</span>
-                </div>
-                
-                {balanceUsed > 0 && (
-                  <div className="flex justify-between text-rose-500 font-black text-xs uppercase tracking-widest pt-2 border-t border-slate-50">
-                    <span>Wallet Applied</span>
-                    <span className="tracking-tight">- ₹{balanceUsed.toFixed(2)}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between text-slate-400 font-bold text-xs uppercase tracking-widest">
                   <span>GST (18%)</span>
-                  <span className="text-slate-900 tracking-tight">₹{gst.toFixed(2)}</span>
+                  <span className="text-slate-900 tracking-tight">₹{gstOnBase.toFixed(2)}</span>
+                </div>
+
+                <div className="pt-4 border-t border-slate-50 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Wallet Credit</span>
+                    </div>
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Available: ₹{walletBalance.toFixed(2)}</span>
+                  </div>
+                  
+                  {balanceUsed > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-black text-xs uppercase tracking-widest">
+                      <span>Applied to bill</span>
+                      <span className="tracking-tight">- ₹{balanceUsed.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-slate-100 flex justify-between items-end">
                   <div>
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Final Amount</span>
-                    <span className="text-4xl font-black text-slate-900 tracking-tighter">₹{Math.max(0, total).toFixed(2)}</span>
+                    <span className="text-4xl font-black text-slate-900 tracking-tighter">₹{Math.max(0, finalTotal).toFixed(2)}</span>
                   </div>
                 </div>
 

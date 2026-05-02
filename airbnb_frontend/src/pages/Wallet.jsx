@@ -1,12 +1,29 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import toast from "react-hot-toast";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft, Calendar, Info, ShieldCheck, Zap } from "lucide-react";
+import { 
+  Wallet as WalletIcon, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  Calendar, 
+  Info, 
+  ShieldCheck, 
+  Zap, 
+  Plus, 
+  ExternalLink,
+  Clock,
+  CheckCircle2,
+  XCircle
+} from "lucide-react";
 
 function Wallet() {
   const [balance, setBalance] = useState("0.00");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTopup, setShowTopup] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -16,9 +33,8 @@ function Wallet() {
       ]);
       setBalance(profileRes.data.wallet_balance);
       
-      // Merge and sort all transaction types
-      const walletTxs = txRes.data.wallet_transactions || [];
-      const subTxs = txRes.data.subscription_transactions || [];
+      const walletTxs = (txRes.data.wallet_transactions || []).map(t => ({ ...t, source: 'wallet' }));
+      const subTxs = (txRes.data.subscription_transactions || []).map(t => ({ ...t, source: 'sub' }));
       const allTxs = [...walletTxs, ...subTxs].sort((a, b) => 
         new Date(b.created_at) - new Date(a.created_at)
       );
@@ -34,6 +50,40 @@ function Wallet() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleTopup = async () => {
+    if (!amount || parseFloat(amount) <= 0) return toast.error("Please enter a valid amount");
+    setProcessing(true);
+    try {
+      const res = await API.post("wallet/topup/", { amount });
+      toast.success(res.data.message);
+      setBalance(res.data.balance);
+      setShowTopup(false);
+      setAmount("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Top-up failed");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!amount || parseFloat(amount) <= 0) return toast.error("Please enter a valid amount");
+    setProcessing(true);
+    try {
+      const res = await API.post("wallet/withdraw/", { amount });
+      toast.success(res.data.message);
+      setBalance(res.data.balance);
+      setShowWithdraw(false);
+      setAmount("");
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Withdrawal failed");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading your vault...</div>;
 
@@ -53,14 +103,24 @@ function Wallet() {
                   <ShieldCheck size={24} className="text-slate-500" />
                 </div>
                 
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Balance</p>
-                <h2 className="text-5xl font-black tracking-tighter mb-8">₹{parseFloat(balance).toLocaleString()}</h2>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Available Balance</p>
+                <h2 className="text-5xl font-black tracking-tighter mb-10">₹{parseFloat(balance).toLocaleString()}</h2>
                 
-                <div className="p-5 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-3">
-                  <Zap size={18} className="text-amber-400" />
-                  <p className="text-[10px] font-bold text-slate-300 leading-relaxed uppercase tracking-wider">
-                    Credits apply automatically to your next plan change.
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setShowTopup(true)}
+                    className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                  >
+                    <Plus size={14} />
+                    Add Money
+                  </button>
+                  <button 
+                    onClick={() => setShowWithdraw(true)}
+                    className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 border border-white/10"
+                  >
+                    <ExternalLink size={14} />
+                    Withdraw
+                  </button>
                 </div>
               </div>
               
@@ -75,14 +135,14 @@ function Wallet() {
                   <div className="p-2 h-fit bg-slate-50 rounded-lg text-slate-400"><Info size={16} /></div>
                   <div className="space-y-1">
                     <p className="font-bold text-slate-800 text-sm">Where did this credit come from?</p>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Credits are generated when you downgrade a plan mid-cycle or through administrative adjustments.</p>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Credits are generated when you downgrade a plan mid-cycle or through booking refunds.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="p-2 h-fit bg-slate-50 rounded-lg text-slate-400"><Info size={16} /></div>
                   <div className="space-y-1">
-                    <p className="font-bold text-slate-800 text-sm">Can I withdraw to bank?</p>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Direct withdrawals are currently processed manually. Contact support for payout requests.</p>
+                    <p className="font-bold text-slate-800 text-sm">Withdrawal Time</p>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Withdrawals to bank accounts usually take 2-3 business days to process.</p>
                   </div>
                 </div>
               </div>
@@ -96,7 +156,7 @@ function Wallet() {
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">Financial Statement</h2>
                 <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
                   <Calendar size={14} />
-                  <span>Last 30 Days</span>
+                  <span>Activity Log</span>
                 </div>
               </div>
 
@@ -105,15 +165,17 @@ function Wallet() {
                   <div className="w-20 h-20 bg-slate-50 rounded-3xl mb-6 flex items-center justify-center text-slate-200">
                     <ArrowUpRight size={40} />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900">No transactions recorded</h3>
-                  <p className="text-slate-500 mt-2 max-w-xs font-medium">Any plan changes or wallet adjustments will appear here in detail.</p>
+                  <h3 className="text-xl font-bold text-slate-900">No transactions yet</h3>
+                  <p className="text-slate-500 mt-2 max-w-xs font-medium">Add funds or book a property to see your activity here.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {transactions.map((tx) => {
                     const isCredit = ['refund', 'credit', 'adjustment', 'topup'].includes(tx.transaction_type);
+                    const status = tx.status || 'completed';
+                    
                     return (
-                      <div key={tx.id} className="group p-6 rounded-3xl border border-slate-50 bg-slate-50/20 hover:bg-white hover:border-slate-100 transition-all hover:shadow-lg hover:shadow-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div key={`${tx.source}-${tx.id}`} className="group p-6 rounded-3xl border border-slate-50 bg-slate-50/20 hover:bg-white hover:border-slate-100 transition-all hover:shadow-lg hover:shadow-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="flex items-center gap-6">
                           <div className={`p-4 rounded-2xl flex-shrink-0 ${
                             tx.transaction_type === 'purchase' || tx.transaction_type === 'subscription' ? 'bg-slate-900 text-white' : 
@@ -122,7 +184,19 @@ function Wallet() {
                             {isCredit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                           </div>
                           <div>
-                            <p className="font-extrabold text-slate-900 capitalize leading-none mb-1.5">{tx.transaction_type.replace('_', ' ')}</p>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <p className="font-extrabold text-slate-900 capitalize leading-none">{tx.transaction_type.replace('_', ' ')}</p>
+                              {status === 'pending' && (
+                                <span className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                                  <Clock size={10} /> Pending
+                                </span>
+                              )}
+                              {status === 'completed' && (
+                                <span className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full">
+                                  <CheckCircle2 size={10} /> Completed
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()} at {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             <p className="text-xs text-slate-500 mt-2 font-medium max-w-sm">{tx.description}</p>
                           </div>
@@ -151,6 +225,114 @@ function Wallet() {
           </div>
         </div>
       </div>
+
+      {/* Topup Modal */}
+      {showTopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Add Funds</h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium">Top-up your wallet instantly using your card.</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Amount to Add</label>
+                <div className="relative">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">₹</span>
+                  <input 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00" 
+                    className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-5 font-black text-xl outline-none focus:border-rose-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Method</span>
+                  <span className="text-slate-900">Visa ending in 4242</span>
+                </div>
+                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Fee</span>
+                  <span className="text-emerald-500">₹0.00 (Waived)</span>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setShowTopup(false)}
+                  className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleTopup}
+                  disabled={processing}
+                  className="flex-3 bg-slate-900 text-white py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition active:scale-95 disabled:opacity-50"
+                >
+                  {processing ? 'Processing...' : 'Confirm Top-up'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Modal */}
+      {showWithdraw && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Withdraw Money</h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium">Funds will be sent to your linked bank account.</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Withdrawal Amount</label>
+                <div className="relative">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xl">₹</span>
+                  <input 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00" 
+                    className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl pl-12 pr-6 py-5 font-black text-xl outline-none focus:border-rose-500 focus:bg-white transition"
+                  />
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 mt-2 ml-1 uppercase tracking-widest">Max available: ₹{parseFloat(balance).toLocaleString()}</p>
+              </div>
+
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Destination</span>
+                  <span className="text-slate-900">HDFC Bank **** 9012</span>
+                </div>
+                <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>ETA</span>
+                  <span className="text-amber-500">2-3 Business Days</span>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button 
+                  onClick={() => setShowWithdraw(false)}
+                  className="flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleWithdraw}
+                  disabled={processing}
+                  className="flex-3 bg-slate-900 text-white py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-500 transition active:scale-95 disabled:opacity-50"
+                >
+                  {processing ? 'Processing...' : 'Request Payout'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

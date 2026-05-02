@@ -11,6 +11,8 @@ from .views import (
     SubscriptionView,
     SubscriptionQuoteView,
     TransactionView,
+    WalletTopupView,
+    WalletWithdrawView,
     AdminStatsView,
     AdminUserListView,
     SupportTicketViewSet,
@@ -36,6 +38,8 @@ urlpatterns = [
     path('subscription/', SubscriptionView.as_view(), name='subscription'),
     path('subscription/quote/', SubscriptionQuoteView.as_view(), name='subscription-quote'),
     path('transactions/', TransactionView.as_view(), name='transactions'),
+    path('wallet/topup/', WalletTopupView.as_view(), name='wallet-topup'),
+    path('wallet/withdraw/', WalletWithdrawView.as_view(), name='wallet-withdraw'),
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/users/', AdminUserListView.as_view(), name='admin-users'),
 ]
