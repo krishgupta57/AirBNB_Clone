@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage
+from .models import User, Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage, WalletTransaction
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -174,6 +174,11 @@ class WishlistSerializer(serializers.ModelSerializer):
         model = Wishlist
         fields = ['id', 'property', 'property_detail']
 
+
+class WalletTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WalletTransaction
+        fields = ['id', 'amount', 'transaction_type', 'description', 'created_at']
 
 class SubscriptionTransactionSerializer(serializers.ModelSerializer):
     class Meta:

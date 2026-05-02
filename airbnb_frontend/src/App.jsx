@@ -114,9 +114,9 @@ function App() {
           <Route
             path="/wallet"
             element={
-              <HostRoute>
+              <ProtectedRoute>
                 <Wallet />
-              </HostRoute>
+              </ProtectedRoute>
             }
           />
 

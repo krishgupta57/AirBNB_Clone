@@ -217,7 +217,7 @@ function Navbar() {
                        <p className="text-lg font-black text-slate-900 truncate tracking-tight">{user.username}</p>
                     </div>
 
-                    {user.role === 'host' && (
+                    {user && (
                       <div className="mx-4 my-3 p-4 bg-slate-900 rounded-xl flex justify-between items-center group cursor-pointer" onClick={() => { navigate('/wallet'); setIsMenuOpen(false); }}>
                         <div>
                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Wallet Balance</p>

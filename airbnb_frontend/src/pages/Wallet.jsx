@@ -15,7 +15,15 @@ function Wallet() {
         API.get("transactions/")
       ]);
       setBalance(profileRes.data.wallet_balance);
-      setTransactions(txRes.data);
+      
+      // Merge and sort all transaction types
+      const walletTxs = txRes.data.wallet_transactions || [];
+      const subTxs = txRes.data.subscription_transactions || [];
+      const allTxs = [...walletTxs, ...subTxs].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      
+      setTransactions(allTxs);
     } catch (error) {
       toast.error("Failed to load wallet data");
     } finally {
@@ -102,39 +110,41 @@ function Wallet() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="group p-6 rounded-3xl border border-slate-50 bg-slate-50/20 hover:bg-white hover:border-slate-100 transition-all hover:shadow-lg hover:shadow-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className={`p-4 rounded-2xl flex-shrink-0 ${
-                          tx.transaction_type === 'purchase' ? 'bg-slate-900 text-white' : 
-                          tx.transaction_type === 'credit' ? 'bg-emerald-100 text-emerald-600' : 
-                          tx.transaction_type === 'refund' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'
-                        }`}>
-                          {tx.transaction_type === 'purchase' ? <ArrowUpRight size={20} /> : <ArrowDownLeft size={20} />}
+                  {transactions.map((tx) => {
+                    const isCredit = ['refund', 'credit', 'adjustment', 'topup'].includes(tx.transaction_type);
+                    return (
+                      <div key={tx.id} className="group p-6 rounded-3xl border border-slate-50 bg-slate-50/20 hover:bg-white hover:border-slate-100 transition-all hover:shadow-lg hover:shadow-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                          <div className={`p-4 rounded-2xl flex-shrink-0 ${
+                            tx.transaction_type === 'purchase' || tx.transaction_type === 'subscription' ? 'bg-slate-900 text-white' : 
+                            isCredit ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                          }`}>
+                            {isCredit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-slate-900 capitalize leading-none mb-1.5">{tx.transaction_type.replace('_', ' ')}</p>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()} at {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-xs text-slate-500 mt-2 font-medium max-w-sm">{tx.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-extrabold text-slate-900 capitalize leading-none mb-1.5">{tx.transaction_type.replace('_', ' ')}</p>
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date(tx.created_at).toLocaleDateString()} at {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                          <p className="text-xs text-slate-500 mt-2 font-medium max-w-sm">{tx.description}</p>
+                        
+                        <div className="flex flex-col items-end">
+                          <p className={`text-2xl font-black tracking-tight ${
+                            isCredit ? 'text-emerald-500' : 'text-slate-900'
+                          }`}>
+                            {isCredit ? '+' : '-'}₹{parseFloat(tx.amount).toLocaleString()}
+                          </p>
+                          <div className="mt-1">
+                            {tx.tier_to && (
+                              <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                                {tx.tier_from} to {tx.tier_to}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-col items-end">
-                        <p className={`text-2xl font-black tracking-tight ${
-                          tx.transaction_type === 'purchase' || tx.transaction_type === 'adjustment' ? 'text-slate-900' : 'text-emerald-500'
-                        }`}>
-                          {tx.transaction_type === 'purchase' || tx.transaction_type === 'adjustment' ? '-' : '+'}₹{parseFloat(tx.amount).toLocaleString()}
-                        </p>
-                        <div className="mt-1">
-                          {tx.tier_to && (
-                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
-                              {tx.tier_from} to {tx.tier_to}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

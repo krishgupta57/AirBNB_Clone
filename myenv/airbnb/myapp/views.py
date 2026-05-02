@@ -15,7 +15,7 @@ from django.db.models import Sum, Count
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 import random
 
-from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage
+from .models import Property, Booking, Review, Wishlist, SubscriptionTransaction, Message, SupportTicket, SupportMessage, Inquiry, InquiryMessage, WalletTransaction
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -28,7 +28,8 @@ from .serializers import (
     SupportTicketSerializer,
     SupportMessageSerializer,
     InquirySerializer,
-    InquiryMessageSerializer
+    InquiryMessageSerializer,
+    WalletTransactionSerializer
 )
 from decimal import Decimal
 
@@ -113,41 +114,22 @@ class SubscriptionView(APIView):
         # Financial logic
         if balance_used > 0:
             user.wallet_balance -= balance_used
-            user.subscription_transactions.create(
+            WalletTransaction.objects.create(
+                user=user,
                 amount=balance_used,
-                transaction_type='adjustment',
-                description=f"Applied ₹{balance_used} from wallet balance for {plan} upgrade."
+                transaction_type='subscription',
+                description=f"Paid ₹{balance_used} from wallet for {plan} plan."
             )
 
-        if action_type == 'credit' and amount_paid < 0:
+        if amount_paid < 0:
             # Downgrade credit to wallet
             credit_amt = abs(amount_paid)
             user.wallet_balance += credit_amt
-            user.subscription_transactions.create(
+            WalletTransaction.objects.create(
+                user=user,
                 amount=credit_amt,
-                transaction_type='credit',
-                tier_from=old_tier,
-                tier_to=plan,
-                description=f"Credited ₹{credit_amt} to wallet after downgrading from {old_tier} to {plan}."
-            )
-        elif action_type == 'refund' and amount_paid < 0:
-            # Downgrade simulated refund
-            refund_amt = abs(amount_paid)
-            user.subscription_transactions.create(
-                amount=refund_amt,
-                transaction_type='refund',
-                tier_from=old_tier,
-                tier_to=plan,
-                description=f"Refund initiated for ₹{refund_amt} after downgrading from {old_tier} to {plan}."
-            )
-        elif amount_paid > 0:
-            # Plan purchase/upgrade
-            user.subscription_transactions.create(
-                amount=amount_paid,
-                transaction_type='purchase',
-                tier_from=old_tier,
-                tier_to=plan,
-                description=f"Upgraded from {old_tier} to {plan}."
+                transaction_type='adjustment',
+                description=f"Subscription credit: ₹{credit_amt} after switching to {plan}."
             )
 
         user.subscription_tier = plan
@@ -217,9 +199,14 @@ class TransactionView(APIView):
     serializer_class = SubscriptionTransactionSerializer
 
     def get(self, request):
-        txs = request.user.subscription_transactions.all().order_by('-created_at')
-        serializer = SubscriptionTransactionSerializer(txs, many=True)
-        return Response(serializer.data)
+        # Fetch both types of transactions
+        wallet_txs = request.user.wallet_transactions.all().order_by('-created_at')
+        sub_txs = request.user.subscription_transactions.all().order_by('-created_at')
+        
+        return Response({
+            "wallet_transactions": WalletTransactionSerializer(wallet_txs, many=True).data,
+            "subscription_transactions": SubscriptionTransactionSerializer(sub_txs, many=True).data
+        })
 
 
 # --- Core ViewSets ---
@@ -459,7 +446,26 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.Retr
         
         booking.status = 'cancelled'
         booking.save()
-        return Response({"message": "Booking cancelled successfully"})
+
+        # Refund to wallet
+        user = booking.user
+        refund_amount = booking.total_price
+        user.wallet_balance += refund_amount
+        user.save()
+
+        # Record transaction
+        WalletTransaction.objects.create(
+            user=user,
+            amount=refund_amount,
+            transaction_type='refund',
+            description=f"Refund for cancelled booking #{booking.id} at {booking.property.title}"
+        )
+
+        return Response({
+            "message": "Booking cancelled successfully. Amount refunded to your wallet.",
+            "refund_amount": str(refund_amount),
+            "new_balance": str(user.wallet_balance)
+        })
 
     @extend_schema(
         methods=['GET'],
