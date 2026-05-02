@@ -62,7 +62,8 @@ function SubscriptionCheckout() {
       
       // Update local storage
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
-      userData.subscription_tier = planId;
+      userData.subscription_tier = res.data.tier;
+      userData.role = res.data.role;
       userData.wallet_balance = res.data.balance;
       localStorage.setItem("user", JSON.stringify(userData));
 

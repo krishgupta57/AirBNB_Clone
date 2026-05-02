@@ -51,10 +51,7 @@ function Pricing() {
   const currentTier = user?.subscription_tier || "trial";
 
   const handleSelectPlan = (planId) => {
-    if (planId === "trial") {
-      navigate("/host-dashboard");
-      return;
-    }
+    // Navigate to checkout for any plan selection (including trial/downgrade)
     navigate(`/subscription-checkout?plan=${planId}`);
   };
 
@@ -108,10 +105,12 @@ function Pricing() {
                 className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
                   currentTier === plan.id 
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                  : (plan.id === 'trial' ? 'bg-slate-900 text-white' : 'bg-rose-500 text-white hover:shadow-lg hover:shadow-rose-200')
+                  : (plan.id === 'trial' ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-rose-500 text-white hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-200')
                 }`}
               >
-                {currentTier === plan.id ? 'Current Plan' : (plan.id === 'trial' ? 'Get Started' : 'Upgrade Now')}
+                {currentTier === plan.id ? 'Current Plan' : 
+                 (PLANS.findIndex(p => p.id === plan.id) < PLANS.findIndex(p => p.id === currentTier) ? 'Downgrade' : 
+                  (plan.id === 'trial' ? 'Get Started' : 'Upgrade Now'))}
               </button>
             </div>
           ))}

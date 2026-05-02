@@ -1,13 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, Search, User, Wallet as WalletIcon, LogOut, LayoutDashboard, Home, Heart, UserCircle, Globe, BarChart3, Users, ClipboardList, Bell, ShieldCheck, HelpCircle } from "lucide-react";
 import API from "../api";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { getUser, logoutUser } from "../utils/auth";
 import toast from "react-hot-toast";
 import axios from "axios";
 
 function Navbar() {
-  const user = getUser();
+  const location = useLocation();
+  const user = useMemo(() => getUser(), [location.pathname]);
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [search, setSearch] = useState("");

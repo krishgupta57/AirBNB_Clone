@@ -152,6 +152,15 @@ class SubscriptionView(APIView):
 
         user.subscription_tier = plan
         user.last_billed_at = timezone.now()
+        
+        # Role Logic:
+        # 1. If they move to 'trial' (the free/default state), they become a guest
+        if plan == 'trial':
+            user.role = 'guest'
+        # 2. If a guest upgrades to any paid listing plan, they become a host
+        elif user.role == 'guest':
+            user.role = 'host'
+            
         user.save()
         
         # Automatically sync visibility based on new plan limits
@@ -160,6 +169,7 @@ class SubscriptionView(APIView):
         return Response({
             "message": f"Successfully updated to {plan} plan!",
             "tier": user.subscription_tier,
+            "role": user.role,
             "balance": str(user.wallet_balance)
         })
 
