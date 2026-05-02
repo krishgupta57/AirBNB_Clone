@@ -30,7 +30,7 @@ function Profile() {
       });
       setLoading(false);
     } catch (err) {
-      toast.error("Failed to load profile");
+      toast.error("Profile Error: We couldn't load your account details. Please refresh.");
       setLoading(false);
     }
   };
@@ -69,9 +69,9 @@ function Profile() {
       
       setIsEditing(false);
       setAvatarFile(null);
-      toast.success("Profile updated successfully!");
+      toast.success("Profile Updated: Your changes have been saved successfully.");
     } catch (err) {
-      toast.error("Failed to update profile");
+      toast.error(err.response?.data?.error || "Update Failed: We couldn't save your changes. Please check your inputs.");
     }
   };
 

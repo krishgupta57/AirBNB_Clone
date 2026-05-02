@@ -27,7 +27,7 @@ function Login() {
       console.log("Login response:", res.data);
 
       if (!res.data.access || !res.data.refresh) {
-        toast.error("Login token not received from backend");
+        toast.error("Security Error: Authentication tokens not received. Please try again.");
         setLoading(false);
         return;
       }
@@ -46,7 +46,7 @@ function Login() {
       console.log("Saved access token:", localStorage.getItem("access"));
       console.log("Saved user:", localStorage.getItem("user"));
 
-      toast.success("Login successful");
+      toast.success("Welcome back! You've successfully logged in.");
       if (profileRes.data.is_staff) {
         navigate("/admin/dashboard");
       } else {
@@ -54,8 +54,8 @@ function Login() {
       }
       window.location.reload();
     } catch (error) {
-      console.log("Login error:", error.response?.data || error.message);
-      toast.error("Invalid username or password");
+      const errorMsg = error.response?.data?.detail || error.response?.data?.error || "Access Denied: The username or password you entered is incorrect.";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }

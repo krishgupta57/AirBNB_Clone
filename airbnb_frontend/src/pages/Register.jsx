@@ -23,11 +23,19 @@ function Register() {
     e.preventDefault();
     try {
       await API.post("register/", form);
-      toast.success("Account created! Please check your Gmail.");
+      toast.success("Account Created: Please check your Gmail for the 6-digit verification code.");
       navigate("/verify-otp", { state: { email: form.email } });
     } catch (error) {
-      console.log(error.response?.data);
-      toast.error("Registration failed");
+      const data = error.response?.data;
+      let msg = "Registration Failed: Please ensure all fields are filled correctly.";
+      if (data) {
+        if (typeof data === 'string') msg = data;
+        else if (data.error) msg = data.error;
+        else if (data.username) msg = `Username: ${data.username[0]}`;
+        else if (data.email) msg = `Email: ${data.email[0]}`;
+        else if (data.password) msg = `Password: ${data.password[0]}`;
+      }
+      toast.error(msg);
     }
   };
 

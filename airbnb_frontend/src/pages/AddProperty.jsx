@@ -72,7 +72,7 @@ function AddProperty() {
   const toggleAmenity = (am) => {
     const isAllowed = isAmenityAllowed(am);
     if (!isAllowed) {
-      toast.error(`Upgrade to unlock ${am}!`);
+      toast.error(`Premium Feature: Please upgrade your plan to unlock ${am}.`);
       return;
     }
 
