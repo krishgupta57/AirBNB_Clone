@@ -13,6 +13,8 @@ from .views import (
     TransactionView,
     WalletTopupView,
     WalletWithdrawView,
+    CreatePaymentOrderView,
+    VerifyPaymentView,
     AdminStatsView,
     AdminUserListView,
     SupportTicketViewSet,
@@ -40,6 +42,8 @@ urlpatterns = [
     path('transactions/', TransactionView.as_view(), name='transactions'),
     path('wallet/topup/', WalletTopupView.as_view(), name='wallet-topup'),
     path('wallet/withdraw/', WalletWithdrawView.as_view(), name='wallet-withdraw'),
+    path('payments/create-order/', CreatePaymentOrderView.as_view(), name='create-payment-order'),
+    path('payments/verify/', VerifyPaymentView.as_view(), name='verify-payment'),
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/users/', AdminUserListView.as_view(), name='admin-users'),
 ]

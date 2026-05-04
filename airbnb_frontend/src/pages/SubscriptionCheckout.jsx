@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import API from "../api";
 import toast from "react-hot-toast";
-import { CreditCard, ChevronLeft, ShieldCheck, Zap, Star, Crown, Wallet as WalletIcon, ArrowRight, Info } from "lucide-react";
+import { CreditCard, ChevronLeft, ShieldCheck, Zap, Star, Crown, Wallet as WalletIcon, ArrowRight, Info, CheckCircle2, Lock } from "lucide-react";
+
 
 function SubscriptionCheckout() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ function SubscriptionCheckout() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [downgradeAction, setDowngradeAction] = useState("credit"); // 'credit' or 'refund'
+  const [selectedMethod, setSelectedMethod] = useState("upi");
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -54,29 +56,82 @@ function SubscriptionCheckout() {
   const handlePayment = async () => {
     setProcessing(true);
     try {
-      const payload = {
-        plan: planId,
-        amount: isDowngrade ? adjustment : netToPay, // Adjustment is negative for downgrades
-        action: isDowngrade ? downgradeAction : "purchase",
-        balance_used: balanceUsed
+      if (isDowngrade || finalTotal <= 0) {
+        const payload = {
+          plan: planId,
+          amount: isDowngrade ? adjustment : 0,
+          action: isDowngrade ? downgradeAction : "purchase",
+          balance_used: balanceUsed
+        };
+        const res = await API.post("subscription/", payload);
+        updateUserLocal(res.data);
+        toast.success(res.data.message || "Plan updated!");
+        navigate("/host-dashboard");
+        return;
+      }
+
+      // 1. Create real Razorpay order
+      const orderRes = await API.post("payments/create-order/", { amount: finalTotal });
+      const { order_id, key_id, amount: orderAmount } = orderRes.data;
+
+      // 2. Configure real Razorpay
+      const options = {
+        key: key_id,
+        amount: orderAmount,
+        currency: "INR",
+        name: "AirBNB Clone",
+        description: `Upgrade to ${planId} plan`,
+        order_id: order_id,
+        handler: async (response) => {
+          await verifyPayment(response, finalTotal, planId, balanceUsed);
+        },
+        prefill: {
+          name: JSON.parse(localStorage.getItem("user") || "{}").username || "",
+          email: JSON.parse(localStorage.getItem("user") || "{}").email || "",
+          method: selectedMethod, // Pre-select the method in Razorpay
+        },
+        theme: { color: "#F43F5E" },
       };
 
-      const res = await API.post("subscription/", payload);
-      
-      // Update local storage
-      const userData = JSON.parse(localStorage.getItem("user") || "{}");
-      userData.subscription_tier = res.data.tier;
-      userData.role = res.data.role;
-      userData.wallet_balance = res.data.balance;
-      localStorage.setItem("user", JSON.stringify(userData));
+      if (key_id === 'rzp_test_placeholder') {
+        toast.error("Invalid Razorpay Key! Please add real keys to .env file.");
+        setProcessing(false);
+        return;
+      }
 
-      toast.success(res.data.message || "Subscription updated!");
-      navigate("/host-dashboard");
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
     } catch (error) {
       toast.error(error.response?.data?.error || "Transaction failed");
     } finally {
       setProcessing(false);
     }
+  };
+
+  const verifyPayment = async (response, amount, plan, balanceUsed) => {
+    try {
+      const verifyRes = await API.post("payments/verify/", {
+        ...response,
+        amount,
+        type: 'subscription',
+        plan: plan,
+        balance_used: balanceUsed
+      });
+      updateUserLocal(verifyRes.data);
+      toast.success(verifyRes.data.message);
+      navigate("/host-dashboard");
+    } catch (err) {
+      toast.error("Payment verification failed");
+    }
+  };
+
+  const updateUserLocal = (data) => {
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    userData.subscription_tier = data.tier;
+    userData.role = data.role;
+    userData.wallet_balance = data.balance;
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   return (
@@ -87,7 +142,7 @@ function SubscriptionCheckout() {
           Back to Plans
         </button>
 
-        <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Review Adjustment</h1>
+        <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Checkout</h1>
         <p className="text-slate-500 font-medium mb-10 uppercase text-xs tracking-widest">{quote.current_plan} <ArrowRight className="inline mx-2" size={14} /> {quote.new_plan}</p>
 
         <div className="grid lg:grid-cols-5 gap-10">
@@ -145,38 +200,39 @@ function SubscriptionCheckout() {
                 </div>
               </section>
             ) : (
-              <>
-                <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
-                  <h2 className="text-xl font-black text-slate-900 mb-6 uppercase tracking-tight">Payment Method</h2>
-                  <div className="p-6 border-2 border-rose-100 bg-rose-50/20 rounded-[2rem] flex items-center gap-4 mb-6">
-                    <div className="bg-white p-4 rounded-3xl shadow-sm">
-                      <CreditCard className="text-rose-500" size={28} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-black text-slate-900 uppercase tracking-tighter">Mock Secured Card</p>
-                      <p className="text-xs text-rose-600 font-bold uppercase tracking-[0.2em] mt-0.5">Instant Processor</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <input placeholder="Cardholder Name" className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:border-rose-500 transition" />
-                    <div className="grid grid-cols-2 gap-4">
-                      <input placeholder="MM/YY" className="bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:border-rose-500 transition" />
-                      <input placeholder="CVV" className="bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:border-rose-500 transition" />
-                    </div>
-                  </div>
-                </section>
-
-                <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white flex gap-6 items-center">
-                  <div className="p-4 bg-white/10 rounded-3xl flex-shrink-0">
-                    <ShieldCheck className="text-emerald-400" size={32} />
-                  </div>
-                  <div>
-                    <p className="font-black text-lg mb-1 tracking-tight">Financial Shield Active</p>
-                    <p className="text-slate-400 text-xs font-medium leading-relaxed">Proration logic ensures you never pay for the same day twice. Only the usage difference is billed.</p>
-                  </div>
+              <section className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100">
+                <h2 className="text-xl font-black text-slate-900 mb-8 uppercase tracking-tight">Select Payment Method</h2>
+                
+                <div className="grid gap-4">
+                  {[
+                    { id: 'upi', name: 'UPI / QR', icon: <Zap size={20} />, desc: 'Google Pay, PhonePe, etc.' },
+                    { id: 'card', name: 'Cards', icon: <CreditCard size={20} />, desc: 'Visa, Mastercard, RuPay' },
+                    { id: 'netbanking', name: 'Netbanking', icon: <ShieldCheck size={20} />, desc: 'All Indian Banks' },
+                  ].map((method) => (
+                    <button 
+                      key={method.id}
+                      onClick={() => setSelectedMethod(method.id)}
+                      className={`flex items-center justify-between p-6 rounded-3xl border-2 transition-all group ${selectedMethod === method.id ? 'border-rose-500 bg-rose-50 shadow-lg' : 'border-slate-50 bg-slate-50/50 hover:border-slate-200'}`}
+                    >
+                      <div className="flex items-center gap-4 text-left">
+                        <div className={`p-3 rounded-2xl ${selectedMethod === method.id ? 'bg-rose-500 text-white' : 'bg-white text-slate-400'}`}>
+                          {method.icon}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800 leading-none">{method.name}</p>
+                          <p className="text-xs text-slate-500 font-medium mt-1.5">{method.desc}</p>
+                        </div>
+                      </div>
+                      {selectedMethod === method.id && <div className="w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center animate-in zoom-in duration-200"><CheckCircle2 size={12} className="text-white" /></div>}
+                    </button>
+                  ))}
                 </div>
-              </>
+
+                <div className="mt-10 p-6 bg-slate-50 rounded-3xl border border-slate-100 flex items-center gap-4">
+                   <Lock size={20} className="text-slate-400" />
+                   <p className="text-xs text-slate-500 font-medium leading-relaxed">Your payment is secured by Razorpay. We do not store your card or bank details.</p>
+                </div>
+              </section>
             )}
           </div>
 
@@ -239,7 +295,7 @@ function SubscriptionCheckout() {
                   disabled={processing}
                   className={`w-full py-6 rounded-3xl bg-slate-900 text-white font-black text-lg uppercase tracking-widest mt-6 hover:bg-rose-500 transition-all shadow-2xl shadow-slate-200 active:scale-95 ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {processing ? 'Processing...' : (isDowngrade ? 'CONFIRM DOWNGRADE' : 'UPGRADE PLAN')}
+                  {processing ? 'Processing...' : (isDowngrade ? 'CONFIRM DOWNGRADE' : 'PAY & UPGRADE')}
                 </button>
                 <div className="flex items-center justify-center gap-2 mt-6">
                    <ShieldCheck size={14} className="text-slate-400" />

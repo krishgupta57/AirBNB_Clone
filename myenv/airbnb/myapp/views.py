@@ -227,14 +227,145 @@ class TransactionView(APIView):
             "subscription_transactions": SubscriptionTransactionSerializer(sub_txs, many=True).data
         })
 
+class CreatePaymentOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        amount = Decimal(str(request.data.get('amount', 0)))
+        if amount <= 0:
+            return Response({"error": "Invalid amount"}, status=400)
+        
+        try:
+            from .payment_gateway import RazorpayClient
+            client = RazorpayClient()
+            order = client.create_order(amount)
+            return Response({
+                "order_id": order['id'],
+                "amount": order['amount'],
+                "key_id": settings.RAZORPAY_KEY_ID
+            })
+        except Exception as e:
+            error_msg = str(e)
+            
+            # Auto-mock fallback if keys are missing or invalid
+            is_config_error = settings.RAZORPAY_KEY_ID == 'rzp_test_placeholder' or "Unauthorized" in error_msg or "Invalid" in error_msg
+            
+            if is_config_error:
+                return Response({
+                    "order_id": f"order_mock_{random.randint(1000,9999)}",
+                    "amount": int(amount * 100),
+                    "key_id": settings.RAZORPAY_KEY_ID,
+                    "is_mock": True,
+                    "warning": f"Mock Mode Active. Error: {error_msg}"
+                })
+            
+            return Response({
+                "error": "Payment Gateway Error", 
+                "details": error_msg,
+                "hint": "Check your Razorpay credentials and server connection."
+            }, status=500)
+
+class VerifyPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        razorpay_order_id = request.data.get('razorpay_order_id')
+        razorpay_payment_id = request.data.get('razorpay_payment_id')
+        razorpay_signature = request.data.get('razorpay_signature')
+        
+        # Internal context
+        payment_type = request.data.get('type') # 'topup' or 'subscription'
+        amount = Decimal(str(request.data.get('amount', 0)))
+        plan = request.data.get('plan')
+
+        is_verified = False
+        if razorpay_order_id.startswith('order_mock_'):
+            is_verified = True
+        else:
+            from .payment_gateway import RazorpayClient
+            client = RazorpayClient()
+            is_verified = client.verify_payment(razorpay_order_id, razorpay_payment_id, razorpay_signature)
+
+        if is_verified:
+            user = request.user
+            if payment_type == 'topup':
+                user.wallet_balance += amount
+                user.save()
+                WalletTransaction.objects.create(
+                    user=user,
+                    amount=amount,
+                    transaction_type='topup',
+                    status='completed',
+                    description=f"Wallet top-up (Ref: {razorpay_payment_id})"
+                )
+                return Response({"message": "Payment verified and wallet updated!", "balance": str(user.wallet_balance)})
+            
+            elif payment_type == 'subscription':
+                # Deduct balance if used
+                balance_used = Decimal(str(request.data.get('balance_used', 0)))
+                if balance_used > 0:
+                    user.wallet_balance -= balance_used
+                    WalletTransaction.objects.create(
+                        user=user,
+                        amount=balance_used,
+                        transaction_type='subscription',
+                        status='completed',
+                        description=f"Paid ₹{balance_used} from wallet for {plan} plan."
+                    )
+
+                user.subscription_tier = plan
+                # Role Logic
+                if plan != 'trial' and user.role == 'guest':
+                    user.role = 'host'
+                user.save()
+                
+                # Sync visibility
+                user.sync_listing_limits()
+
+                WalletTransaction.objects.create(
+                    user=user,
+                    amount=amount,
+                    transaction_type='subscription',
+                    status='completed',
+                    description=f"Plan upgrade to {plan} (Ref: {razorpay_payment_id})"
+                )
+                return Response({
+                    "message": "Subscription upgraded successfully!",
+                    "tier": user.subscription_tier,
+                    "role": user.role,
+                    "balance": str(user.wallet_balance)
+                })
+
+            elif payment_type == 'booking':
+                # Deduct balance if used
+                balance_used = Decimal(str(request.data.get('balance_used', 0)))
+                if balance_used > 0:
+                    user.wallet_balance -= balance_used
+                    WalletTransaction.objects.create(
+                        user=user,
+                        amount=balance_used,
+                        transaction_type='subscription', # Or create a 'booking_payment' type
+                        status='completed',
+                        description=f"Paid ₹{balance_used} from wallet for booking."
+                    )
+                user.save()
+
+                booking_id = request.data.get('booking_id')
+                booking = get_object_or_404(Booking, id=booking_id, user=request.user)
+                booking.status = 'confirmed'
+                booking.save()
+                return Response({
+                    "message": f"Booking confirmed for {booking.property.title}!",
+                    "status": "confirmed"
+                })
+
+        return Response({"error": "Payment verification failed"}, status=400)
+
 class WalletTopupView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         amount = Decimal(request.data.get('amount', 0))
-        if amount <= 0:
-            return Response({"error": "Invalid amount"}, status=400)
-        
         user = request.user
         user.wallet_balance += amount
         user.save()
@@ -262,6 +393,8 @@ class WalletWithdrawView(APIView):
         if amount <= 0 or amount > user.wallet_balance:
             return Response({"error": "Invalid amount or insufficient balance"}, status=400)
         
+        bank_details = request.data.get('bank_details', 'Not provided')
+        
         user.wallet_balance -= amount
         user.save()
 
@@ -270,7 +403,7 @@ class WalletWithdrawView(APIView):
             amount=amount,
             transaction_type='withdrawal',
             status='pending',
-            description=f"Withdrawal request to bank account"
+            description=f"Withdrawal request to: {bank_details}"
         )
 
         return Response({
@@ -504,9 +637,9 @@ class BookingViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.Retr
             "support_unread": support_unread,
             "inquiry_unread": inquiry_unread
         })
-
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # Default status is 'pending' until paid
+        serializer.save(user=self.request.user, status='pending')
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):

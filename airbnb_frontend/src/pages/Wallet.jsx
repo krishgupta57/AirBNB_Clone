@@ -55,28 +55,68 @@ function Wallet() {
     if (!amount || parseFloat(amount) <= 0) return toast.error("Please enter a valid amount");
     setProcessing(true);
     try {
-      const res = await API.post("wallet/topup/", { amount });
-      toast.success(res.data.message);
-      setBalance(res.data.balance);
-      setShowTopup(false);
-      setAmount("");
-      fetchData();
+      // 1. Create order on backend
+      const orderRes = await API.post("payments/create-order/", { amount });
+      const { order_id, key_id, amount: orderAmount } = orderRes.data;
+
+      // 2. Open Razorpay modal
+      const options = {
+        key: key_id,
+        amount: orderAmount,
+        currency: "INR",
+        name: "AirBNB Clone",
+        description: "Wallet Top-up",
+        order_id: order_id,
+        handler: async (response) => {
+          try {
+            // 3. Verify payment on backend
+            const verifyRes = await API.post("payments/verify/", {
+              ...response,
+              amount,
+              type: 'topup'
+            });
+            toast.success(verifyRes.data.message);
+            setBalance(verifyRes.data.balance);
+            setShowTopup(false);
+            setAmount("");
+            fetchData();
+          } catch (err) {
+            toast.error("Payment verification failed");
+          }
+        },
+        prefill: {
+          name: JSON.parse(localStorage.getItem("user") || "{}").username || "",
+          email: JSON.parse(localStorage.getItem("user") || "{}").email || "",
+        },
+        theme: { color: "#F43F5E" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
     } catch (error) {
-      toast.error(error.response?.data?.error || "Top-up failed");
+      toast.error(error.response?.data?.error || "Failed to initiate payment");
     } finally {
       setProcessing(false);
     }
   };
 
+  const [bankDetails, setBankDetails] = useState("");
+
   const handleWithdraw = async () => {
     if (!amount || parseFloat(amount) <= 0) return toast.error("Please enter a valid amount");
+    if (!bankDetails) return toast.error("Please enter bank details or UPI ID");
+    
     setProcessing(true);
     try {
-      const res = await API.post("wallet/withdraw/", { amount });
+      const res = await API.post("wallet/withdraw/", { 
+        amount, 
+        bank_details: bankDetails 
+      });
       toast.success(res.data.message);
       setBalance(res.data.balance);
       setShowWithdraw(false);
       setAmount("");
+      setBankDetails("");
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.error || "Withdrawal failed");
@@ -302,10 +342,21 @@ function Wallet() {
                 <p className="text-[9px] font-bold text-slate-400 mt-2 ml-1 uppercase tracking-widest">Max available: ₹{parseFloat(balance).toLocaleString()}</p>
               </div>
 
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Destination Account (Bank / UPI)</label>
+                <input 
+                  type="text" 
+                  value={bankDetails}
+                  onChange={(e) => setBankDetails(e.target.value)}
+                  placeholder="Account Number, IFSC or UPI ID" 
+                  className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl px-6 py-4 font-bold text-sm outline-none focus:border-rose-500 focus:bg-white transition"
+                />
+              </div>
+
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                 <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <span>Destination</span>
-                  <span className="text-slate-900">HDFC Bank **** 9012</span>
+                  <span>Method</span>
+                  <span className="text-slate-900 italic">Manual Bank Transfer</span>
                 </div>
                 <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   <span>ETA</span>

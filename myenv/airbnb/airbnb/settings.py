@@ -196,3 +196,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
+# Razorpay Settings
+RAZORPAY_KEY_ID = os.getenv('Test_API_Key', 'rzp_test_placeholder')
+RAZORPAY_KEY_SECRET = os.getenv('Test_Key_Secret', 'placeholder_secret')

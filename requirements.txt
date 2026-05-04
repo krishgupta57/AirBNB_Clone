@@ -10,3 +10,4 @@ mysqlclient
 mysql-connector-python
 Pillow
 requests
+razorpay

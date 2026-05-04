@@ -15,24 +15,38 @@ function Navbar() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profile, setProfile] = useState(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
 
+  const fetchData = async () => {
+    try {
+      const [unreadRes, profileRes] = await Promise.all([
+        API.get("bookings/unread_count/"),
+        API.get("profile/")
+      ]);
+      setUnreadCount(unreadRes.data.unread_count);
+      setProfile(profileRes.data);
+    } catch (error) {
+      console.error("Failed to fetch navbar data", error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      fetchUnreadCount();
+      fetchData();
       
       const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
-          fetchUnreadCount();
+          fetchData();
         }
       };
 
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible') {
-          fetchUnreadCount();
+          fetchData();
         }
-      }, 10000); // Increased interval to 10s for better performance
+      }, 15000); 
 
       document.addEventListener('visibilitychange', handleVisibilityChange);
       
@@ -42,15 +56,6 @@ function Navbar() {
       };
     }
   }, [user]);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await API.get("bookings/unread_count/");
-      setUnreadCount(res.data.unread_count);
-    } catch (error) {
-      console.error("Failed to fetch unread count", error);
-    }
-  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -221,7 +226,7 @@ function Navbar() {
                       <div className="mx-4 my-3 p-4 bg-slate-900 rounded-xl flex justify-between items-center group cursor-pointer" onClick={() => { navigate('/wallet'); setIsMenuOpen(false); }}>
                         <div>
                           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Wallet Balance</p>
-                          <p className="text-sm font-black text-white">₹{parseFloat(user.wallet_balance || 0).toLocaleString()}</p>
+                          <p className="text-sm font-black text-white">₹{parseFloat(profile?.wallet_balance || user?.wallet_balance || 0).toLocaleString()}</p>
                         </div>
                         <WalletIcon size={14} className="text-rose-500" />
                       </div>
