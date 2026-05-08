@@ -35,7 +35,7 @@ function MyBookings() {
 
   useEffect(() => {
     loadBookings();
-    const interval = setInterval(loadBookings, 5000);
+    const interval = setInterval(loadBookings, 30000); // Polling every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
