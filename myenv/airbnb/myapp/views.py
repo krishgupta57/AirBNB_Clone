@@ -240,6 +240,7 @@ class CreatePaymentOrderView(APIView):
 
     def post(self, request):
         amount = Decimal(str(request.data.get('amount', 0)))
+        print(f"DEBUG: Using Razorpay Key ID starting with: {settings.RAZORPAY_KEY_ID[:8]}...")
         if amount <= 0:
             return Response({"error": "Invalid amount"}, status=400)
         
