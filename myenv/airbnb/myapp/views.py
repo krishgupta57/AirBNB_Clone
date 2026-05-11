@@ -56,7 +56,7 @@ class RegisterView(generics.CreateAPIView):
                 message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
-                fail_silently=True,
+                fail_silently=False, # Changed to False to see the error in logs
             )
         except Exception as e:
             print(f"Email failed to send: {e}")
