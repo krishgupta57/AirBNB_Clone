@@ -93,6 +93,14 @@ DATABASES = {
     )
 }
 
+# Fix for PyMySQL 'ssl-mode' error
+if 'OPTIONS' in DATABASES['default'] and 'ssl-mode' in DATABASES['default']['OPTIONS']:
+    # Remove the problematic key that causes the crash
+    del DATABASES['default']['OPTIONS']['ssl-mode']
+    # If using Aiven, PyMySQL handles SSL automatically if requested, 
+    # but we can force it here if needed:
+    DATABASES['default']['OPTIONS']['ssl'] = {'ca': None} # Placeholder or specific CA
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
