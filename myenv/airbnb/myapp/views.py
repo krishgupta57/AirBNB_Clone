@@ -75,7 +75,8 @@ class VerifyOTPView(APIView):
         if not email or not otp:
             return Response({"error": "Email and OTP are required."}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            user = User.objects.get(email=email)
+            # Pick the most recent registration in case of duplicates
+            user = User.objects.filter(email=email).latest('id')
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
         if user.otp == otp:
