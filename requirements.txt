@@ -6,8 +6,8 @@ python-dotenv
 dj-database-url
 gunicorn
 whitenoise
-mysqlclient
 mysql-connector-python
+PyMySQL
 Pillow
 requests
 razorpay
