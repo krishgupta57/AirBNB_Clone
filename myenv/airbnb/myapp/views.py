@@ -50,13 +50,16 @@ class RegisterView(generics.CreateAPIView):
         user.save()
         subject = "Your Verification Code - AirBNB Clone"
         message = f"Hi {user.username},\n\nYour 6-digit verification code is: {otp}\n\nPlease enter this code on the website to activate your account.\n\nIf you didn't register on our site, please ignore this email."
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            print(f"Email failed to send: {e}")
 
 
 class VerifyOTPView(APIView):
