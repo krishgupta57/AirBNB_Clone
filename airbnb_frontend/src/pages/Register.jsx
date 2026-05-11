@@ -15,12 +15,15 @@ function Register() {
     confirm_password: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const submitForm = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await API.post("register/", form);
       toast.success("Account Created: Please check your Gmail for the 6-digit verification code.");
@@ -36,6 +39,8 @@ function Register() {
         else if (data.password) msg = `Password: ${data.password[0]}`;
       }
       toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,8 +104,11 @@ function Register() {
             required
           />
 
-          <button className="w-full bg-rose-500 hover:bg-slate-900 text-white py-3.5 rounded-2xl font-semibold transition">
-            Register
+          <button 
+            disabled={loading}
+            className={`w-full py-3.5 rounded-2xl font-semibold transition ${loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-rose-500 hover:bg-slate-900 text-white'}`}
+          >
+            {loading ? "Creating Account..." : "Register"}
           </button>
         </form>
 

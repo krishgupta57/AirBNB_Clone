@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from decimal import Decimal
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets, mixins
@@ -40,26 +41,29 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
 
+    @transaction.atomic
     def perform_create(self, serializer):
         user = serializer.save()
         if user.role == 'admin':
             user.is_staff = True
             user.is_superuser = True
+        
         otp = str(random.randint(100000, 999999))
         user.otp = otp
         user.save()
+
         subject = "Your Verification Code - AirBNB Clone"
-        message = f"Hi {user.username},\n\nYour 6-digit verification code is: {otp}\n\nPlease enter this code on the website to activate your account.\n\nIf you didn't register on our site, please ignore this email."
-        try:
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False, # Changed to False to see the error in logs
-            )
-        except Exception as e:
-            print(f"Email failed to send: {e}")
+        message = f"Hi {user.username},\n\nYour 6-digit verification code is: {otp}\n\nPlease enter this code on the website to activate your account."
+        
+        # We REMOVE the try/except here because we WANT it to fail 
+        # so the transaction rolls back if the email can't be sent.
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
 
 
 class VerifyOTPView(APIView):

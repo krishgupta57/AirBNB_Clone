@@ -12,3 +12,5 @@ Pillow
 requests
 razorpay
 drf-spectacular
+PyYAML
+uritemplate
