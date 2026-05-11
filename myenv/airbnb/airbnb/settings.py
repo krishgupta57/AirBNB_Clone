@@ -94,12 +94,12 @@ DATABASES = {
 }
 
 # Fix for PyMySQL 'ssl-mode' error
-if 'OPTIONS' in DATABASES['default'] and 'ssl-mode' in DATABASES['default']['OPTIONS']:
-    # Remove the problematic key that causes the crash
-    del DATABASES['default']['OPTIONS']['ssl-mode']
-    # If using Aiven, PyMySQL handles SSL automatically if requested, 
-    # but we can force it here if needed:
-    DATABASES['default']['OPTIONS']['ssl'] = {'ca': None} # Placeholder or specific CA
+if DATABASES.get('default') and 'OPTIONS' in DATABASES['default']:
+    if 'ssl-mode' in DATABASES['default']['OPTIONS']:
+        del DATABASES['default']['OPTIONS']['ssl-mode']
+    # Ensure SSL dict exists if we want to force it, or just leave it to auto-detect
+    if os.getenv('DATABASE_URL') and 'aivencloud.com' in os.getenv('DATABASE_URL'):
+        DATABASES['default']['OPTIONS']['ssl'] = {'ssl-mode': 'REQUIRED'} if 'mysqlclient' in str(DATABASES['default'].get('ENGINE')) else {}
 
 
 # Password validation
