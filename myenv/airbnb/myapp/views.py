@@ -876,9 +876,11 @@ class AdminStatsView(APIView):
         })
 
 class AdminUserListView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated] # Changed from IsAdminUser to let you use the Master Key
 
     def get(self, request):
+        if not request.user.is_staff:
+             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         users = User.objects.annotate(listing_count=Count('properties')).order_by('-date_joined')
         
         # Categorize
