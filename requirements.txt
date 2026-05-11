@@ -11,3 +11,4 @@ PyMySQL
 Pillow
 requests
 razorpay
+drf-spectacular
