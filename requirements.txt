@@ -14,3 +14,4 @@ razorpay
 drf-spectacular
 PyYAML
 uritemplate
+cryptography # Required for MySQL 8+ authentication
