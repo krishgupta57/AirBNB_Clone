@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HostRoute from "./components/HostRoute";
 import AdminRoute from "./components/AdminRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -64,6 +65,7 @@ function App() {
           },
         }}
       />
+      <ScrollToTop />
       <Navbar />
       <main className="flex-1 pt-20">
         <Routes>
